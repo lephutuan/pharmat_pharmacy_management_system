@@ -36,7 +36,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Tên Nhà Thuốc</label>
               <input
-                v-model="settings.name"
+                v-model="settings.pharmacy_name"
                 type="text"
                 class="input-field"
                 placeholder="Nhập tên nhà thuốc"
@@ -45,7 +45,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Địa Chỉ</label>
               <textarea
-                v-model="settings.address"
+                v-model="settings.pharmacy_address"
                 class="input-field"
                 rows="3"
                 placeholder="Nhập địa chỉ nhà thuốc"
@@ -55,7 +55,7 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Số Điện Thoại</label>
                 <input
-                  v-model="settings.phone"
+                  v-model="settings.pharmacy_phone"
                   type="tel"
                   class="input-field"
                   placeholder="0901234567"
@@ -64,14 +64,16 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
                 <input
-                  v-model="settings.email"
+                  v-model="settings.pharmacy_email"
                   type="email"
                   class="input-field"
                   placeholder="info@pharmat.com"
                 />
               </div>
             </div>
-            <button class="btn-primary">Lưu Thay Đổi</button>
+            <button @click="saveSettings" :disabled="saving" class="btn-primary">
+              {{ saving ? 'Đang lưu...' : 'Lưu Thay Đổi' }}
+            </button>
           </div>
         </div>
 
@@ -171,10 +173,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { CogIcon, ShieldCheckIcon, BellAlertIcon, ServerIcon } from '@heroicons/vue/24/outline'
+import api from '@/services/api'
+import { useToast } from '@/composables/useToast'
+
+const { success, error } = useToast()
 
 const activeSection = ref('general')
+const saving = ref(false)
 
 const sections = [
   { id: 'general', label: 'Cài Đặt Chung', icon: CogIcon },
@@ -184,10 +191,52 @@ const sections = [
 ]
 
 const settings = reactive({
-  name: 'Nhà Thuốc PharmaT',
-  address: '123 Đường ABC, Quận XYZ, TP.HCM',
-  phone: '0901234567',
-  email: 'info@pharmat.com'
+  pharmacy_name: '',
+  pharmacy_address: '',
+  pharmacy_phone: '',
+  pharmacy_email: ''
+})
+
+async function fetchSettings() {
+  try {
+    const response = await api.get('/settings')
+    const data = response.data
+    settings.pharmacy_name = data.pharmacy_name || ''
+    settings.pharmacy_address = data.pharmacy_address || ''
+    settings.pharmacy_phone = data.pharmacy_phone || ''
+    settings.pharmacy_email = data.pharmacy_email || ''
+  } catch (err) {
+    console.error('Error fetching settings:', err)
+  }
+}
+
+async function saveSettings() {
+  saving.value = true
+  try {
+    // Update each setting individually
+    const updates = [
+      { key: 'pharmacy_name', value: settings.pharmacy_name },
+      { key: 'pharmacy_address', value: settings.pharmacy_address },
+      { key: 'pharmacy_phone', value: settings.pharmacy_phone },
+      { key: 'pharmacy_email', value: settings.pharmacy_email }
+    ]
+    
+    await Promise.all(
+      updates.map(setting => 
+        api.put(`/settings/${setting.key}`, { value: setting.value })
+      )
+    )
+    
+    success('Đã lưu cài đặt thành công!')
+  } catch (err: any) {
+    error(err.response?.data?.error || 'Lỗi khi lưu cài đặt')
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(() => {
+  fetchSettings()
 })
 
 const password = reactive({

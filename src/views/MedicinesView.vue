@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-title text-gray-800">Quản Lý Thuốc</h1>
-      <button class="btn-primary">
+      <button @click="openAddModal" class="btn-primary">
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
@@ -92,12 +92,12 @@
                 </td>
                 <td class="py-3 px-4">
                   <div class="flex items-center justify-center gap-2">
-                    <button class="text-primary hover:text-blue-700" title="Sửa">
+                    <button @click="openEditModal(medicine)" class="text-primary hover:text-blue-700" title="Sửa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
-                    <button class="text-red-600 hover:text-red-700" title="Xóa">
+                    <button @click="confirmDelete(medicine)" class="text-red-600 hover:text-red-700" title="Xóa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
@@ -121,6 +121,18 @@
         </div>
       </template>
     </div>
+
+    <!-- Medicine Modal -->
+    <Modal
+      v-model="showModal"
+      :title="editingMedicine ? 'Sửa Thuốc' : 'Thêm Thuốc Mới'"
+    >
+      <MedicineForm
+        :medicine="editingMedicine"
+        @success="handleFormSuccess"
+        @cancel="closeModal"
+      />
+    </Modal>
   </div>
 </template>
 
@@ -128,6 +140,11 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import type { Medicine } from '@/types'
 import api from '@/services/api'
+import Modal from '@/components/Modal.vue'
+import MedicineForm from '@/components/MedicineForm.vue'
+import { useToast } from '@/composables/useToast'
+
+const { success, error } = useToast()
 
 const searchQuery = ref('')
 const selectedCategory = ref('')
@@ -135,6 +152,8 @@ const stockFilter = ref('')
 const medicines = ref<Medicine[]>([])
 const loading = ref(false)
 const totalItems = ref(0)
+const showModal = ref(false)
+const editingMedicine = ref<Medicine | null>(null)
 
 // Fetch medicines from API
 async function fetchMedicines() {
@@ -191,6 +210,40 @@ watch([searchQuery, selectedCategory], () => {
   // Uncomment to refetch from backend on filter change
   // fetchMedicines()
 })
+
+// Modal handlers
+function openAddModal() {
+  editingMedicine.value = null
+  showModal.value = true
+}
+
+function openEditModal(medicine: Medicine) {
+  editingMedicine.value = medicine
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+  editingMedicine.value = null
+}
+
+function handleFormSuccess() {
+  closeModal()
+  fetchMedicines()
+  success('Thuốc đã được lưu thành công!')
+}
+
+async function confirmDelete(medicine: Medicine) {
+  if (confirm(`Bạn có chắc chắn muốn xóa "${medicine.name}"?`)) {
+    try {
+      await api.delete(`/medicines/${medicine.id}`)
+      success('Thuốc đã được xóa thành công!')
+      fetchMedicines()
+    } catch (err: any) {
+      error(err.response?.data?.error || 'Lỗi khi xóa thuốc')
+    }
+  }
+}
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)

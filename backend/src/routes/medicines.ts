@@ -3,6 +3,19 @@ import pool from "../config/database";
 
 const router = express.Router();
 
+// Get categories
+router.get("/categories", async (req, res) => {
+  try {
+    const [rows]: any = await pool.execute(
+      "SELECT * FROM medicine_categories ORDER BY name"
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
+});
+
 // Mock data as fallback
 const medicines = [
   {

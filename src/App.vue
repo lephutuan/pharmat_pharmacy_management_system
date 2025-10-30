@@ -1,5 +1,6 @@
 <template>
   <router-view />
+  <ToastContainer />
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="loading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -15,6 +16,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import ToastContainer from '@/components/ToastContainer.vue'
 
 const loading = ref(false)
 const authStore = useAuthStore()
@@ -35,4 +37,3 @@ onMounted(() => {
   opacity: 0;
 }
 </style>
-

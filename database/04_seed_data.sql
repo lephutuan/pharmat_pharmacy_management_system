@@ -9,9 +9,9 @@ ON DUPLICATE KEY UPDATE name=name;
 
 -- Insert Admin User (password: password - bcrypt hashed)
 INSERT INTO users (id, name, email, password, role, phone, avatar) VALUES
-('U001', 'Nguyễn Văn A', 'admin@pharmat.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin', '0901234567', 'https://ui-avatars.com/api/?name=Nguyen+Van+A&background=313fb2&color=fff'),
-('U002', 'Trần Thị B', 'sales@pharmat.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'sales_staff', '0902345678', 'https://ui-avatars.com/api/?name=Tran+Thi+B&background=4361ee&color=fff'),
-('U003', 'Lê Văn C', 'inventory@pharmat.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'inventory_staff', '0903456789', 'https://ui-avatars.com/api/?name=Le+Van+C&background=10b981&color=fff')
+('U001', 'Nguyễn Văn A', 'admin@pharmat.com', '$2a$10$zdfnOwycHte6BOWDOK/8tela7Dgz0bpzkFDTaRSFC2hbGya878/Jq', 'admin', '0901234567', 'https://ui-avatars.com/api/?name=Nguyen+Van+A&background=313fb2&color=fff'),
+('U002', 'Trần Thị B', 'sales@pharmat.com', '$2a$10$zdfnOwycHte6BOWDOK/8tela7Dgz0bpzkFDTaRSFC2hbGya878/Jq', 'sales_staff', '0902345678', 'https://ui-avatars.com/api/?name=Tran+Thi+B&background=4361ee&color=fff'),
+('U003', 'Lê Văn C', 'inventory@pharmat.com', '$2a$10$zdfnOwycHte6BOWDOK/8tela7Dgz0bpzkFDTaRSFC2hbGya878/Jq', 'inventory_staff', '0903456789', 'https://ui-avatars.com/api/?name=Le+Van+C&background=10b981&color=fff')
 ON DUPLICATE KEY UPDATE name=name;
 
 -- Insert Settings

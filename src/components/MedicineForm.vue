@@ -1,0 +1,273 @@
+<template>
+  <form @submit.prevent="handleSubmit" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Tên Thuốc <span class="text-red-500">*</span>
+      </label>
+      <input
+        v-model="formData.name"
+        type="text"
+        required
+        class="input-field"
+        placeholder="Nhập tên thuốc"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Mô Tả
+      </label>
+      <textarea
+        v-model="formData.description"
+        rows="3"
+        class="input-field"
+        placeholder="Mô tả về thuốc"
+      />
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Danh Mục <span class="text-red-500">*</span>
+        </label>
+        <select
+          v-model="formData.category_id"
+          required
+          class="input-field"
+        >
+          <option value="">Chọn danh mục</option>
+          <option
+            v-for="category in categories"
+            :key="category.id"
+            :value="category.id"
+          >
+            {{ category.name }}
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Giá (VNĐ) <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model.number="formData.price"
+          type="number"
+          min="0"
+          step="1000"
+          required
+          class="input-field"
+          placeholder="0"
+        />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Số Lượng <span class="text-red-500">*</span>
+        </label>
+        <input
+          v-model.number="formData.quantity"
+          type="number"
+          min="0"
+          required
+          class="input-field"
+          placeholder="0"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Ngày Hết Hạn
+        </label>
+        <input
+          v-model="formData.expiry_date"
+          type="date"
+          class="input-field"
+        />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Cảnh Báo Tồn Kho
+        </label>
+        <input
+          v-model.number="formData.stock_alert"
+          type="number"
+          min="0"
+          class="input-field"
+          placeholder="20"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Mã Vạch
+        </label>
+        <input
+          v-model="formData.barcode"
+          type="text"
+          class="input-field"
+          placeholder="Mã vạch"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Nhà Sản Xuất
+      </label>
+      <input
+        v-model="formData.manufacturer"
+        type="text"
+        class="input-field"
+        placeholder="Tên nhà sản xuất"
+      />
+    </div>
+
+    <div class="flex justify-end gap-3 pt-4">
+      <button
+        type="button"
+        @click="$emit('cancel')"
+        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+      >
+        Hủy
+      </button>
+      <button
+        type="submit"
+        :disabled="loading"
+        class="btn-primary"
+      >
+        {{ loading ? "Đang lưu..." : isEdit ? "Cập Nhật" : "Thêm Mới" }}
+      </button>
+    </div>
+  </form>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, watch } from "vue";
+import type { Medicine } from "@/types";
+import api from "@/services/api";
+
+interface Props {
+  medicine?: Medicine | null;
+}
+
+const props = defineProps<Props>();
+const emit = defineEmits<{
+  success: [];
+  cancel: [];
+}>();
+
+const loading = ref(false);
+const categories = ref<any[]>([]);
+const isEdit = ref(false);
+
+const formData = ref({
+  name: "",
+  description: "",
+  category_id: "",
+  price: 0,
+  quantity: 0,
+  expiry_date: "",
+  stock_alert: 20,
+  barcode: "",
+  manufacturer: "",
+});
+
+async function fetchCategories() {
+  try {
+    // Fetch categories - we'll create this endpoint
+    const response = await api.get("/medicines/categories");
+    categories.value = response.data;
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    // Fallback to hardcoded if endpoint doesn't exist yet
+    categories.value = [
+      { id: 1, name: "Kháng sinh" },
+      { id: 2, name: "Giảm đau" },
+      { id: 3, name: "Vitamin" },
+    ];
+  }
+}
+
+async function findCategoryIdByName(categoryName: string): Promise<string> {
+  const category = categories.value.find(c => c.name === categoryName);
+  return category ? String(category.id) : "";
+}
+
+watch(
+  () => props.medicine,
+  async (medicine) => {
+    if (medicine) {
+      isEdit.value = true;
+      const categoryId = await findCategoryIdByName(medicine.category);
+      formData.value = {
+        name: medicine.name,
+        description: medicine.description || "",
+        category_id: categoryId,
+        price: medicine.price,
+        quantity: medicine.quantity,
+        expiry_date: medicine.expiryDate,
+        stock_alert: medicine.stockAlert,
+        barcode: medicine.barcode || "",
+        manufacturer: medicine.manufacturer || "",
+      };
+    } else {
+      isEdit.value = false;
+      resetForm();
+    }
+  },
+  { immediate: true }
+);
+
+function resetForm() {
+  formData.value = {
+    name: "",
+    description: "",
+    category_id: "",
+    price: 0,
+    quantity: 0,
+    expiry_date: "",
+    stock_alert: 20,
+    barcode: "",
+    manufacturer: "",
+  };
+}
+
+async function handleSubmit() {
+  loading.value = true;
+  try {
+    const payload = {
+      ...formData.value,
+      price: Number(formData.value.price),
+      quantity: Number(formData.value.quantity),
+      stock_alert: Number(formData.value.stock_alert) || 20,
+      expiry_date: formData.value.expiry_date || null,
+    };
+
+    if (isEdit.value && props.medicine) {
+      await api.put(`/medicines/${props.medicine.id}`, payload);
+      emit("success");
+    } else {
+      await api.post("/medicines", payload);
+      emit("success");
+    }
+  } catch (error: any) {
+    console.error("Error saving medicine:", error);
+    const { useToast } = await import("@/composables/useToast");
+    const { error: showError } = useToast();
+    showError(error.response?.data?.error || "Lỗi khi lưu thuốc");
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(async () => {
+  await fetchCategories();
+});
+</script>
+

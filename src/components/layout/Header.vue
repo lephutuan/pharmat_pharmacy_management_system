@@ -18,7 +18,7 @@
         @click="showNotifications = !showNotifications">
         <BellAlertIcon class="w-6 h-6" />
         <span v-if="unreadAlerts > 0"
-          class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+          class="absolute bottom-5 left-5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
           {{ unreadAlerts > 9 ? '9+' : unreadAlerts }}
         </span>
       </button>
@@ -47,13 +47,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { Teleport } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { UserRole } from '@/types'
 import { BellAlertIcon } from '@heroicons/vue/24/outline'
 import ChatModal from '@/components/ChatModal.vue'
+import api from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -62,7 +63,23 @@ const authStore = useAuthStore()
 const showChat = ref(false)
 const showNotifications = ref(false)
 const hasUnreadMessages = ref(false)
-const unreadAlerts = ref(3)
+const unreadAlerts = ref(0)
+
+// Fetch unread alerts count
+async function fetchUnreadCount() {
+  try {
+    const response = await api.get('/alerts/unread/count')
+    unreadAlerts.value = response.data.count || 0
+  } catch (error) {
+    console.error('Error fetching unread count:', error)
+  }
+}
+
+onMounted(() => {
+  fetchUnreadCount()
+  // Refresh every 30 seconds
+  setInterval(fetchUnreadCount, 30000)
+})
 
 const user = computed(() => authStore.user)
 

@@ -3,13 +3,13 @@
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-title text-gray-800">Quản Lý Kho</h1>
       <div class="flex gap-3">
-        <button class="btn-accent">
+        <button @click="openInventoryModal('import')" class="btn-accent">
           <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
           Nhập Kho
         </button>
-        <button class="btn-outline">
+        <button @click="openInventoryModal('export')" class="btn-outline">
           <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
           </svg>
@@ -108,12 +108,29 @@
         </div>
       </div>
     </div>
+
+    <!-- Inventory Modal -->
+    <Modal
+      v-model="showInventoryModal"
+      :title="inventoryType === 'import' ? 'Nhập Kho' : 'Xuất Kho'"
+    >
+      <InventoryForm
+        :type="inventoryType"
+        @success="handleInventorySuccess"
+        @cancel="showInventoryModal = false"
+      />
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
+import Modal from '@/components/Modal.vue'
+import InventoryForm from '@/components/InventoryForm.vue'
+
+const showInventoryModal = ref(false)
+const inventoryType = ref<'import' | 'export'>('import')
 
 const recentRecords = ref<any[]>([])
 const expiringItems = ref<any[]>([])
@@ -179,6 +196,16 @@ async function fetchInventoryData() {
   } finally {
     loading.value = false
   }
+}
+
+function openInventoryModal(type: 'import' | 'export') {
+  inventoryType.value = type
+  showInventoryModal.value = true
+}
+
+function handleInventorySuccess() {
+  showInventoryModal.value = false
+  fetchInventoryData()
 }
 
 onMounted(() => {

@@ -1,14 +1,17 @@
+// Load environment variables FIRST before any other imports
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import medicinesRoutes from "./routes/medicines.js";
 import inventoryRoutes from "./routes/inventory.js";
 import salesRoutes from "./routes/sales.js";
 import staffRoutes from "./routes/staff.js";
 import membersRoutes from "./routes/members.js";
-
-dotenv.config();
+import alertsRoutes from "./routes/alerts.js";
+import settingsRoutes from "./routes/settings.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +28,8 @@ app.use("/api/inventory", inventoryRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/members", membersRoutes);
+app.use("/api/alerts", alertsRoutes);
+app.use("/api/settings", settingsRoutes);
 
 // Root route - API info
 app.get("/", (req, res) => {
@@ -40,6 +45,8 @@ app.get("/", (req, res) => {
       sales: "/api/sales",
       staff: "/api/staff",
       members: "/api/members",
+      alerts: "/api/alerts",
+      settings: "/api/settings",
     },
   });
 });

@@ -63,8 +63,30 @@
 
     <!-- Alerts List -->
     <div class="card">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Danh Sách Cảnh Báo</h3>
-      <div class="space-y-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-800">Danh Sách Cảnh Báo</h3>
+        <button
+          v-if="highAlerts + mediumAlerts + lowAlerts > 0"
+          @click="markAllAsRead"
+          class="text-sm text-primary hover:text-primary/80 font-medium"
+        >
+          Đánh dấu tất cả đã đọc
+        </button>
+      </div>
+      
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p class="mt-4 text-gray-600">Đang tải...</p>
+      </div>
+      
+      <!-- Empty State -->
+      <div v-else-if="filteredAlerts.length === 0" class="text-center py-12">
+        <p class="text-gray-600">Không có cảnh báo nào</p>
+      </div>
+      
+      <!-- Alerts List -->
+      <div v-else class="space-y-3">
         <div
           v-for="alert in filteredAlerts"
           :key="alert.id"
@@ -72,7 +94,7 @@
             'p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all',
             getAlertBg(alert.severity)
           ]"
-          @click="alert.read = !alert.read"
+          @click="markAsRead(alert.id)"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1">
@@ -84,16 +106,26 @@
                 </span>
               </div>
               <p class="text-sm text-gray-600">{{ alert.message }}</p>
-              <p class="text-xs text-gray-500 mt-2">{{ formatDateTime(alert.date) }}</p>
+              <p class="text-xs text-gray-500 mt-2">{{ formatDateTime(new Date(alert.date)) }}</p>
             </div>
             <div class="flex flex-col items-center gap-2">
               <button
                 v-if="!alert.read"
                 class="text-primary hover:text-primary/80 transition-colors"
                 @click.stop="markAsRead(alert.id)"
+                title="Đánh dấu đã đọc"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+              <button
+                @click.stop="deleteAlert(alert.id)"
+                class="text-red-600 hover:text-red-700 transition-colors"
+                title="Xóa"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
               <span v-if="!alert.read" class="w-2 h-2 bg-primary rounded-full"></span>
@@ -106,63 +138,103 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { BellAlertIcon, ExclamationTriangleIcon, CubeIcon, CogIcon } from '@heroicons/vue/24/outline'
+import type { Alert } from '@/types'
+import api from '@/services/api'
+import { useToast } from '@/composables/useToast'
 
-interface Alert {
-  id: string
-  type: 'expiry' | 'low_stock' | 'system'
-  title: string
-  message: string
-  severity: 'low' | 'medium' | 'high'
-  date: Date
-  read: boolean
-}
+const { success, error } = useToast()
 
 const filter = ref('all')
-
-const alerts: Alert[] = [
-  {
-    id: '1',
-    type: 'expiry',
-    title: 'Thuốc sắp hết hạn',
-    message: 'Amoxicillin 500mg sẽ hết hạn trong 15 ngày (15/03/2024)',
-    severity: 'high',
-    date: new Date(),
-    read: false
-  },
-  {
-    id: '2',
-    type: 'low_stock',
-    title: 'Hàng sắp hết trong kho',
-    message: 'Paracetamol 500mg còn 5 sản phẩm trong kho',
-    severity: 'medium',
-    date: new Date(Date.now() - 3600000),
-    read: false
-  },
-  {
-    id: '3',
-    type: 'system',
-    title: 'Hệ thống cập nhật',
-    message: 'Có phiên bản mới của phần mềm. Vui lòng cập nhật.',
-    severity: 'low',
-    date: new Date(Date.now() - 7200000),
-    read: true
-  }
-]
+const alerts = ref<Alert[]>([])
+const loading = ref(false)
 
 const filteredAlerts = computed(() => {
-  if (filter.value === 'all') return alerts
-  if (filter.value === 'expiry') return alerts.filter(a => a.type === 'expiry')
-  if (filter.value === 'stock') return alerts.filter(a => a.type === 'low_stock')
-  if (filter.value === 'system') return alerts.filter(a => a.type === 'system')
-  return alerts
+  if (filter.value === 'all') return alerts.value
+  if (filter.value === 'expiry') return alerts.value.filter(a => a.type === 'expiry')
+  if (filter.value === 'stock') return alerts.value.filter(a => a.type === 'low_stock')
+  if (filter.value === 'system') return alerts.value.filter(a => a.type === 'system')
+  return alerts.value
 })
 
-const highAlerts = computed(() => alerts.filter(a => a.severity === 'high' && !a.read).length)
-const mediumAlerts = computed(() => alerts.filter(a => a.severity === 'medium' && !a.read).length)
-const lowAlerts = computed(() => alerts.filter(a => a.severity === 'low' && !a.read).length)
-const resolvedAlerts = computed(() => alerts.filter(a => a.read).length)
+const highAlerts = computed(() => alerts.value.filter(a => a.severity === 'high' && !a.read).length)
+const mediumAlerts = computed(() => alerts.value.filter(a => a.severity === 'medium' && !a.read).length)
+const lowAlerts = computed(() => alerts.value.filter(a => a.severity === 'low' && !a.read).length)
+const resolvedAlerts = computed(() => alerts.value.filter(a => a.read).length)
+
+async function fetchAlerts() {
+  loading.value = true
+  try {
+    const params: any = { page: 1, limit: 100 }
+    if (filter.value !== 'all') {
+      if (filter.value === 'expiry') params.type = 'expiry'
+      if (filter.value === 'stock') params.type = 'low_stock'
+      if (filter.value === 'system') params.type = 'system'
+    }
+
+    const response = await api.get('/alerts', { params })
+    alerts.value = response.data.data.map((item: any) => ({
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      message: item.message,
+      severity: item.severity,
+      date: item.date || item.created_at || new Date().toISOString(),
+      read: item.read || false
+    }))
+  } catch (err) {
+    console.error('Error fetching alerts:', err)
+    alerts.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+// Watch filter to refetch
+watch(filter, () => {
+  fetchAlerts()
+})
+
+async function markAsRead(alertId: string) {
+  try {
+    await api.put(`/alerts/${alertId}/read`)
+    const alert = alerts.value.find(a => a.id === alertId)
+    if (alert) alert.read = true
+    success('Đã đánh dấu đã đọc')
+  } catch (err: any) {
+    error(err.response?.data?.error || 'Lỗi khi cập nhật cảnh báo')
+  }
+}
+
+async function deleteAlert(alertId: string) {
+  if (confirm('Bạn có chắc chắn muốn xóa cảnh báo này?')) {
+    try {
+      await api.delete(`/alerts/${alertId}`)
+      alerts.value = alerts.value.filter(a => a.id !== alertId)
+      success('Đã xóa cảnh báo')
+    } catch (err: any) {
+      error(err.response?.data?.error || 'Lỗi khi xóa cảnh báo')
+    }
+  }
+}
+
+onMounted(() => {
+  fetchAlerts()
+})
+
+function markAllAsRead() {
+  const unread = alerts.value.filter(a => !a.read)
+  Promise.all(unread.map(a => api.put(`/alerts/${a.id}/read`)))
+    .then(() => {
+      alerts.value.forEach(a => { a.read = true })
+      success('Đã đánh dấu tất cả là đã đọc')
+    })
+    .catch((err) => {
+      error('Lỗi khi cập nhật cảnh báo')
+      console.error(err)
+    })
+}
 
 function getAlertIcon(type: string) {
   switch (type) {
