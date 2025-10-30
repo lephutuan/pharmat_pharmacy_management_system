@@ -14,12 +14,7 @@
     <!-- Filters -->
     <div class="card">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Tìm kiếm thuốc..."
-          class="input-field"
-        />
+        <input v-model="searchQuery" type="text" placeholder="Tìm kiếm thuốc..." class="input-field" />
         <select v-model="selectedCategory" class="input-field">
           <option value="">Tất cả danh mục</option>
           <option value="antibiotic">Kháng sinh</option>
@@ -64,11 +59,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="medicine in filteredMedicines"
-                :key="medicine.id"
-                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
+              <tr v-for="medicine in pagedMedicines" :key="medicine.id"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4">
                   <div>
                     <p class="font-medium text-gray-800">{{ medicine.name }}</p>
@@ -94,12 +86,14 @@
                   <div class="flex items-center justify-center gap-2">
                     <button @click="openEditModal(medicine)" class="text-primary hover:text-blue-700" title="Sửa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
                     <button @click="confirmDelete(medicine)" class="text-red-600 hover:text-red-700" title="Xóa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
                   </div>
@@ -111,27 +105,28 @@
 
         <!-- Pagination -->
         <div class="mt-6 flex items-center justify-between">
-          <p class="text-sm text-gray-600">Hiển thị 1-{{ filteredMedicines.length }} trong tổng số {{ totalItems }} kết quả</p>
+          <p class="text-sm text-gray-600">
+            Hiển thị
+            {{ (currentPage - 1) * pageSize + (pagedMedicines.length ? 1 : 0) }}-
+            {{ (currentPage - 1) * pageSize + pagedMedicines.length }}
+            trong tổng số {{ filteredMedicines.length }} kết quả
+          </p>
           <div class="flex gap-2">
-            <button class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Trước</button>
-            <button class="px-3 py-1 bg-primary text-white rounded-lg">1</button>
-            <button class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">2</button>
-            <button class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Sau</button>
+            <button :disabled="currentPage === 1" @click="currentPage--"
+              class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Trước</button>
+            <button v-for="n in totalPages" :key="n" class="px-3 py-1"
+              :class="n === currentPage ? 'bg-primary text-white rounded-lg' : 'border border-gray-300 rounded-lg hover:bg-gray-50'"
+              @click="currentPage = n">{{ n }}</button>
+            <button :disabled="currentPage === totalPages" @click="currentPage++"
+              class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Sau</button>
           </div>
         </div>
       </template>
     </div>
 
     <!-- Medicine Modal -->
-    <Modal
-      v-model="showModal"
-      :title="editingMedicine ? 'Sửa Thuốc' : 'Thêm Thuốc Mới'"
-    >
-      <MedicineForm
-        :medicine="editingMedicine"
-        @success="handleFormSuccess"
-        @cancel="closeModal"
-      />
+    <Modal v-model="showModal" :title="editingMedicine ? 'Sửa Thuốc' : 'Thêm Thuốc Mới'">
+      <MedicineForm :medicine="editingMedicine" @success="handleFormSuccess" @cancel="closeModal" />
     </Modal>
   </div>
 </template>
@@ -167,7 +162,7 @@ async function fetchMedicines() {
         limit: 100 // Get all for now
       }
     })
-    
+
     // Transform backend data to frontend format
     medicines.value = response.data.data.map((item: any) => ({
       id: item.id,
@@ -181,7 +176,7 @@ async function fetchMedicines() {
       barcode: item.barcode || '',
       manufacturer: item.manufacturer || ''
     }))
-    
+
     totalItems.value = response.data.total
   } catch (error) {
     console.error('Error fetching medicines:', error)
@@ -199,6 +194,19 @@ const filteredMedicines = computed(() => {
     return matchesSearch && matchesCategory
   })
 })
+
+const pageSize = ref(6)
+const currentPage = ref(1)
+
+const pagedMedicines = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredMedicines.value.slice(start, end)
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredMedicines.value.length / pageSize.value)))
+
+watch(filteredMedicines, () => { currentPage.value = 1 })
 
 // Fetch on mount
 onMounted(() => {
@@ -273,4 +281,3 @@ function getStatusText(medicine: Medicine): string {
   return 'Còn hàng'
 }
 </script>
-

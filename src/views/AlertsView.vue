@@ -19,7 +19,8 @@
             <p class="text-3xl font-bold text-red-700">{{ highAlerts }}</p>
           </div>
           <svg class="w-12 h-12 text-red-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
       </div>
@@ -31,7 +32,8 @@
             <p class="text-3xl font-bold text-orange-700">{{ mediumAlerts }}</p>
           </div>
           <svg class="w-12 h-12 text-orange-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
       </div>
@@ -55,7 +57,8 @@
             <p class="text-3xl font-bold text-green-700">{{ resolvedAlerts }}</p>
           </div>
           <svg class="w-12 h-12 text-green-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
       </div>
@@ -65,37 +68,29 @@
     <div class="card">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-800">Danh Sách Cảnh Báo</h3>
-        <button
-          v-if="highAlerts + mediumAlerts + lowAlerts > 0"
-          @click="markAllAsRead"
-          class="text-sm text-primary hover:text-primary/80 font-medium"
-        >
+        <button v-if="highAlerts + mediumAlerts + lowAlerts > 0" @click="markAllAsRead"
+          class="text-sm text-primary hover:text-primary/80 font-medium">
           Đánh dấu tất cả đã đọc
         </button>
       </div>
-      
+
       <!-- Loading State -->
       <div v-if="loading" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         <p class="mt-4 text-gray-600">Đang tải...</p>
       </div>
-      
+
       <!-- Empty State -->
       <div v-else-if="filteredAlerts.length === 0" class="text-center py-12">
         <p class="text-gray-600">Không có cảnh báo nào</p>
       </div>
-      
+
       <!-- Alerts List -->
       <div v-else class="space-y-3">
-        <div
-          v-for="alert in filteredAlerts"
-          :key="alert.id"
-          :class="[
-            'p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all',
-            getAlertBg(alert.severity)
-          ]"
-          @click="markAsRead(alert.id)"
-        >
+        <div v-for="alert in filteredAlerts" :key="alert.id" :class="[
+          'p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all',
+          getAlertBg(alert.severity)
+        ]" @click="markAsRead(alert.id)">
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-2">
@@ -109,23 +104,17 @@
               <p class="text-xs text-gray-500 mt-2">{{ formatDateTime(new Date(alert.date)) }}</p>
             </div>
             <div class="flex flex-col items-center gap-2">
-              <button
-                v-if="!alert.read"
-                class="text-primary hover:text-primary/80 transition-colors"
-                @click.stop="markAsRead(alert.id)"
-                title="Đánh dấu đã đọc"
-              >
+              <button v-if="!alert.read" class="text-primary hover:text-primary/80 transition-colors"
+                @click.stop="markAsRead(alert.id)" title="Đánh dấu đã đọc">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
               </button>
-              <button
-                @click.stop="deleteAlert(alert.id)"
-                class="text-red-600 hover:text-red-700 transition-colors"
-                title="Xóa"
-              >
+              <button @click.stop="deleteAlert(alert.id)" class="text-red-600 hover:text-red-700 transition-colors"
+                title="Xóa">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
               <span v-if="!alert.read" class="w-2 h-2 bg-primary rounded-full"></span>
@@ -292,9 +281,4 @@ function formatDateTime(date: Date): string {
   return date.toLocaleString('vi-VN')
 }
 
-function markAsRead(id: string) {
-  const alert = alerts.find(a => a.id === id)
-  if (alert) alert.read = true
-}
 </script>
-
