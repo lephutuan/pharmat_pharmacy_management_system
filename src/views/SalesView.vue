@@ -47,11 +47,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="order in recentOrders"
-                :key="order.id"
-                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
+              <tr v-for="order in recentOrders" :key="order.id"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4">
                   <span class="font-medium text-primary">#{{ order.id }}</span>
                 </td>
@@ -81,14 +78,12 @@
     <div class="card">
       <h3 class="text-lg font-semibold text-gray-800 mb-4">Sản Phẩm Bán Chạy</h3>
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div
-          v-for="product in topProducts"
-          :key="product.id"
-          class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-        >
+        <div v-for="product in topProducts" :key="product.id"
+          class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
           <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3 mx-auto">
             <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
             </svg>
           </div>
           <p class="font-medium text-gray-800 text-center text-sm mb-1">{{ product.name }}</p>
@@ -99,15 +94,8 @@
     </div>
 
     <!-- Order Modal -->
-    <Modal
-      v-model="showOrderModal"
-      title="Tạo Đơn Hàng Mới"
-      size="large"
-    >
-      <OrderForm
-        @success="handleOrderSuccess"
-        @cancel="showOrderModal = false"
-      />
+    <Modal v-model="showOrderModal" title="Tạo Đơn Hàng Mới" size="large">
+      <OrderForm @success="handleOrderSuccess" @cancel="showOrderModal = false" />
     </Modal>
   </div>
 </template>
@@ -143,7 +131,7 @@ async function fetchSalesData() {
     }
 
     // Fetch recent orders
-    const ordersResponse = await api.get('/sales', { params: { page: 1, limit: 10 } })
+    const ordersResponse = await api.get('/sales', { params: { page: 1, limit: 5 } })
     recentOrders.value = ordersResponse.data.data.map((order: any) => ({
       id: order.id,
       customer: order.customer_name || 'Khách vãng lai',
@@ -186,4 +174,3 @@ function formatDateTime(date: Date): string {
   return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 </script>
-

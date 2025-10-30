@@ -60,7 +60,7 @@
     <!-- Recent Activity -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="card">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Lịch Sử Nhập Xuất</h3>
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Nhập Xuất Gần Đây</h3>
         <div class="space-y-3">
           <div
             v-for="record in recentRecords"
@@ -157,7 +157,7 @@ async function fetchInventoryData() {
   loading.value = true
   try {
     // Fetch inventory records
-    const recordsResponse = await api.get('/inventory', { params: { page: 1, limit: 10 } })
+    const recordsResponse = await api.get('/inventory', { params: { page: 1, limit: 6 } })
     recentRecords.value = recordsResponse.data.data.map((record: any) => ({
       id: record.id,
       medicine: record.medicine_name,
