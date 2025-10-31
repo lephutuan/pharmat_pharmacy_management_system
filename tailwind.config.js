@@ -10,7 +10,7 @@ export default {
         background: "#ebeef1",
       },
       fontFamily: {
-        title: ["Cal Sans", "sans-serif"],
+        title: ["Inter", "sans-serif"],
         body: ["Poppins", "sans-serif"],
       },
       backgroundImage: {
