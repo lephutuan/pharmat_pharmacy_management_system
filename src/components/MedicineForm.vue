@@ -79,11 +79,12 @@
 
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">
-          Ngày Hết Hạn
+          Ngày Hết Hạn <span class="text-red-500">*</span>
         </label>
         <input
           v-model="formData.expiry_date"
           type="date"
+          required
           class="input-field"
         />
       </div>
@@ -246,7 +247,7 @@ async function handleSubmit() {
       price: Number(formData.value.price),
       quantity: Number(formData.value.quantity),
       stock_alert: Number(formData.value.stock_alert) || 20,
-      expiry_date: formData.value.expiry_date || null,
+      expiry_date: formData.value.expiry_date,
     };
 
     if (isEdit.value && props.medicine) {

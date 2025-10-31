@@ -23,6 +23,7 @@
         </select>
         <select v-model="stockFilter" class="input-field">
           <option value="">Tất cả trạng thái</option>
+          <option value="expired">Đã hết hạn</option>
           <option value="low">Hết hàng</option>
           <option value="expiring">Sắp hết hạn</option>
           <option value="available">Còn hàng</option>
@@ -41,7 +42,8 @@
       <!-- Empty State -->
       <div v-else-if="filteredMedicines.length === 0" class="text-center py-12">
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <p class="mt-4 text-gray-600 font-medium">Không tìm thấy thuốc nào</p>
         <p class="text-sm text-gray-500 mt-2">Thử thay đổi bộ lọc hoặc tìm kiếm với từ khóa khác</p>
@@ -204,10 +206,12 @@ const filteredMedicines = computed(() => {
     if (stockFilter.value) {
       const daysUntilExpiry = Math.floor((new Date(med.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
-      if (stockFilter.value === 'low') {
-        matchesStock = med.quantity === 0
+      if (stockFilter.value === 'expired') {
+        matchesStock = daysUntilExpiry < 0
+      } else if (stockFilter.value === 'low') {
+        matchesStock = med.quantity === 0 && daysUntilExpiry >= 0
       } else if (stockFilter.value === 'expiring') {
-        matchesStock = daysUntilExpiry <= 30 && med.quantity > 0
+        matchesStock = daysUntilExpiry >= 0 && daysUntilExpiry <= 30 && med.quantity > 0
       } else if (stockFilter.value === 'available') {
         matchesStock = med.quantity > 0 && daysUntilExpiry > 30
       }
@@ -291,13 +295,19 @@ function getStockClass(quantity: number): string {
 
 function getStatusBadge(medicine: Medicine): string {
   const daysUntilExpiry = Math.floor((new Date(medicine.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  if (medicine.quantity === 0) return 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs'
+
+  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Còn hàng
+  if (daysUntilExpiry < 0) return 'px-3 py-1 bg-red-500 text-white rounded-full text-xs'
+  if (medicine.quantity === 0) return 'px-3 py-1 bg-yellow-100 text-red-700 rounded-full text-xs'
   if (daysUntilExpiry <= 30) return 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs'
   return 'px-3 py-1 bg-accent/20 text-accent rounded-full text-xs'
 }
 
 function getStatusText(medicine: Medicine): string {
   const daysUntilExpiry = Math.floor((new Date(medicine.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
+  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Còn hàng
+  if (daysUntilExpiry < 0) return 'Đã hết hạn'
   if (medicine.quantity === 0) return 'Hết hàng'
   if (daysUntilExpiry <= 30) return 'Sắp hết hạn'
   return 'Còn hàng'
