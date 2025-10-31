@@ -17,16 +17,16 @@
         <input v-model="searchQuery" type="text" placeholder="Tìm kiếm thuốc..." class="input-field" />
         <select v-model="selectedCategory" class="input-field">
           <option value="">Tất cả danh mục</option>
-          <option value="antibiotic">Kháng sinh</option>
-          <option value="analgesic">Giảm đau</option>
-          <option value="vitamin">Vitamin</option>
+          <option value="Kháng sinh">Kháng sinh</option>
+          <option value="Giảm đau">Giảm đau</option>
+          <option value="Vitamin">Vitamin</option>
         </select>
         <select v-model="stockFilter" class="input-field">
-          <option value="">Trạng thái</option>
+          <option value="">Tất cả trạng thái</option>
           <option value="low">Hết hàng</option>
           <option value="expiring">Sắp hết hạn</option>
+          <option value="available">Còn hàng</option>
         </select>
-        <button class="btn-secondary">Lọc</button>
       </div>
     </div>
 
@@ -39,8 +39,12 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="medicines.length === 0" class="text-center py-12">
-        <p class="text-gray-600">Không có thuốc nào</p>
+      <div v-else-if="filteredMedicines.length === 0" class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="mt-4 text-gray-600 font-medium">Không tìm thấy thuốc nào</p>
+        <p class="text-sm text-gray-500 mt-2">Thử thay đổi bộ lọc hoặc tìm kiếm với từ khóa khác</p>
       </div>
 
       <!-- Table Content -->
@@ -189,9 +193,27 @@ async function fetchMedicines() {
 // Client-side filtering (can be removed if using backend filtering only)
 const filteredMedicines = computed(() => {
   return medicines.value.filter(med => {
+    // Lọc theo tìm kiếm
     const matchesSearch = !searchQuery.value || med.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+
+    // Lọc theo danh mục
     const matchesCategory = !selectedCategory.value || med.category === selectedCategory.value
-    return matchesSearch && matchesCategory
+
+    // Lọc theo trạng thái
+    let matchesStock = true
+    if (stockFilter.value) {
+      const daysUntilExpiry = Math.floor((new Date(med.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
+      if (stockFilter.value === 'low') {
+        matchesStock = med.quantity === 0
+      } else if (stockFilter.value === 'expiring') {
+        matchesStock = daysUntilExpiry <= 30 && med.quantity > 0
+      } else if (stockFilter.value === 'available') {
+        matchesStock = med.quantity > 0 && daysUntilExpiry > 30
+      }
+    }
+
+    return matchesSearch && matchesCategory && matchesStock
   })
 })
 
@@ -214,7 +236,7 @@ onMounted(() => {
 })
 
 // Watch for filter changes (optional - can refetch from backend)
-watch([searchQuery, selectedCategory], () => {
+watch([searchQuery, selectedCategory, stockFilter], () => {
   // Uncomment to refetch from backend on filter change
   // fetchMedicines()
 })
