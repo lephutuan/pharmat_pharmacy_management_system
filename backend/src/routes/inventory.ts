@@ -73,23 +73,13 @@ router.post("/", async (req, res) => {
     const id = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     await pool.execute(
-      `INSERT INTO inventory_records (id, medicine_id, type, quantity, user_id, notes) 
+      `INSERT INTO inventory_records (id, medicine_id, type, quantity, user_id, notes)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [id, medicine_id, type, quantity, user_id, notes || null]
     );
 
-    // Note: Stock update is handled by trigger, but we can also do it here
-    if (type === "import") {
-      await pool.execute(
-        "UPDATE medicines SET quantity = quantity + ? WHERE id = ?",
-        [quantity, medicine_id]
-      );
-    } else {
-      await pool.execute(
-        "UPDATE medicines SET quantity = quantity - ? WHERE id = ?",
-        [quantity, medicine_id]
-      );
-    }
+    // Note: Stock update is handled by the tr_inventory_update_stock trigger
+    // No manual update needed here to avoid duplicate updates
 
     const [rows]: any = await pool.execute(
       `SELECT ir.*, 

@@ -35,16 +35,32 @@ router.get("/", async (req, res) => {
 
     const [rows]: any = await pool.execute(query, params);
 
-    // Get order items for each order
-    for (const order of rows) {
-      const [items]: any = await pool.execute(
-        `SELECT oi.*, m.name as medicine_name 
-         FROM order_items oi 
-         JOIN medicines m ON oi.medicine_id = m.id 
-         WHERE oi.order_id = ?`,
-        [order.id]
+    // Fix N+1 query problem: Get all order items in a single query
+    if (rows.length > 0) {
+      const orderIds = rows.map((order: any) => order.id);
+      const placeholders = orderIds.map(() => '?').join(',');
+
+      const [allItems]: any = await pool.execute(
+        `SELECT oi.*, m.name as medicine_name
+         FROM order_items oi
+         JOIN medicines m ON oi.medicine_id = m.id
+         WHERE oi.order_id IN (${placeholders})`,
+        orderIds
       );
-      order.items = items;
+
+      // Group items by order_id
+      const itemsByOrder = allItems.reduce((acc: any, item: any) => {
+        if (!acc[item.order_id]) {
+          acc[item.order_id] = [];
+        }
+        acc[item.order_id].push(item);
+        return acc;
+      }, {});
+
+      // Assign items to each order
+      rows.forEach((order: any) => {
+        order.items = itemsByOrder[order.id] || [];
+      });
     }
 
     // Get total count
@@ -123,7 +139,7 @@ router.post("/", async (req, res) => {
     for (const item of items) {
       const itemId = `${orderId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       await pool.execute(
-        `INSERT INTO order_items (id, order_id, medicine_id, quantity, price, subtotal) 
+        `INSERT INTO order_items (id, order_id, medicine_id, quantity, price, subtotal)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
           itemId,
@@ -135,19 +151,8 @@ router.post("/", async (req, res) => {
         ]
       );
 
-      // Update medicine stock
-      await pool.execute(
-        "UPDATE medicines SET quantity = quantity - ? WHERE id = ?",
-        [item.quantity, item.medicine_id]
-      );
-
-      // Create inventory export record
-      const invId = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await pool.execute(
-        `INSERT INTO inventory_records (id, medicine_id, type, quantity, user_id, notes) 
-         VALUES (?, ?, 'export', ?, ?, 'Xuất bán - Đơn hàng ${orderId}')`,
-        [invId, item.medicine_id, item.quantity, staff_id]
-      );
+      // Note: Stock update is handled by the tr_sale_update_stock trigger
+      // No manual update or inventory_records creation needed to avoid duplicate updates
     }
 
     // Get created order with details
