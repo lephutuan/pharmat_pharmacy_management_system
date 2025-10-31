@@ -154,6 +154,9 @@ router.post("/", async (req, res) => {
     } = req.body;
     const id = `M${Date.now()}`;
 
+    // Convert empty string to NULL for barcode to avoid UNIQUE constraint issues
+    const barcodeValue = barcode && barcode.trim() !== "" ? barcode : null;
+
     await pool.execute(
       "INSERT INTO medicines (id, name, description, category_id, price, quantity, expiry_date, stock_alert, barcode, manufacturer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
@@ -165,7 +168,7 @@ router.post("/", async (req, res) => {
         quantity,
         expiry_date,
         stock_alert,
-        barcode,
+        barcodeValue,
         manufacturer,
       ]
     );
@@ -197,6 +200,9 @@ router.put("/:id", async (req, res) => {
       manufacturer,
     } = req.body;
 
+    // Convert empty string to NULL for barcode to avoid UNIQUE constraint issues
+    const barcodeValue = barcode && barcode.trim() !== "" ? barcode : null;
+
     await pool.execute(
       "UPDATE medicines SET name = ?, description = ?, category_id = ?, price = ?, quantity = ?, expiry_date = ?, stock_alert = ?, barcode = ?, manufacturer = ? WHERE id = ?",
       [
@@ -207,7 +213,7 @@ router.put("/:id", async (req, res) => {
         quantity,
         expiry_date,
         stock_alert,
-        barcode,
+        barcodeValue,
         manufacturer,
         req.params.id,
       ]
