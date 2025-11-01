@@ -2,14 +2,18 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import pool from "../config/database";
+import { validateLogin } from "../utils/validator";
+import { UnauthorizedError, AppError } from "../utils/errors";
+import { logger } from "../utils/logger";
 
 const router = express.Router();
 
 // Login
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
+router.post("/login", async (req, res, next) => {
   try {
+    // Validate input
+    const { email, password } = validateLogin(req.body);
+
     const [rows] = await pool.execute("SELECT * FROM users WHERE email = ?", [
       email,
     ]);
@@ -18,20 +22,30 @@ router.post("/login", async (req, res) => {
     const user = users[0];
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      logger.warn('Login attempt failed: user not found', { email });
+      throw new UnauthorizedError('Invalid credentials');
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      logger.warn('Login attempt failed: invalid password', { email, userId: user.id });
+      throw new UnauthorizedError('Invalid credentials');
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret || jwtSecret === "your-secret-key") {
+      logger.error('JWT_SECRET not configured');
+      return res.status(500).json({ error: "Server configuration error" });
     }
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || "your-secret-key",
+      jwtSecret,
       { expiresIn: "7d" }
     );
+
+    logger.info('User logged in successfully', { userId: user.id, email: user.email, role: user.role });
 
     res.json({
       token,
@@ -43,8 +57,11 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    logger.error('Login error', error);
+    next(error);
   }
 });
 
@@ -56,11 +73,13 @@ router.get("/verify", (req, res) => {
     return res.status(401).json({ error: "No token provided" });
   }
 
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret || jwtSecret === "your-secret-key") {
+    return res.status(500).json({ error: "Server configuration error" });
+  }
+
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "your-secret-key"
-    );
+    const decoded = jwt.verify(token, jwtSecret);
     res.json({ valid: true, user: decoded });
   } catch (error) {
     res.status(401).json({ error: "Invalid token" });

@@ -12,6 +12,7 @@ import staffRoutes from "./routes/staff.js";
 import membersRoutes from "./routes/members.js";
 import alertsRoutes from "./routes/alerts.js";
 import settingsRoutes from "./routes/settings.js";
+import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -56,18 +57,8 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "PharmaT API is running" });
 });
 
-// Error handling middleware
-app.use(
-  (
-    err: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Something went wrong!" });
-  }
-);
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
