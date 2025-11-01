@@ -17,6 +17,26 @@
         </span>
       </router-link>
     </nav>
+
+    <!-- Footer with Settings Info -->
+    <div class="px-4 py-4 border-t border-gray-200 bg-gray-50 space-y-2">
+      <div v-if="settings.pharmacy_name" class="text-xs font-semibold text-gray-800">
+        {{ settings.pharmacy_name }}
+      </div>
+      <div v-if="settings.pharmacy_address" class="text-xs text-gray-600">
+        {{ settings.pharmacy_address }}
+      </div>
+      <div v-if="settings.pharmacy_phone" class="text-xs text-gray-600">
+        📞 {{ settings.pharmacy_phone }}
+      </div>
+      <div v-if="settings.pharmacy_email" class="text-xs text-gray-600">
+        ✉ {{ settings.pharmacy_email }}
+      </div>
+      <div v-if="!settings.pharmacy_name && !settings.pharmacy_address && !settings.pharmacy_phone && !settings.pharmacy_email"
+        class="text-xs text-gray-500 italic">
+        Chưa có thông tin cài đặt
+      </div>
+    </div>
   </aside>
 </template>
 
@@ -41,6 +61,12 @@ import {
 const route = useRoute()
 const authStore = useAuthStore()
 const unreadAlertsCount = ref(0)
+const settings = ref({
+  pharmacy_name: '',
+  pharmacy_address: '',
+  pharmacy_phone: '',
+  pharmacy_email: ''
+})
 
 const allMenuItems = [
   { name: 'Dashboard', path: '/', label: 'Trang Chủ', icon: HomeIcon },
@@ -89,8 +115,24 @@ async function fetchUnreadAlertsCount() {
 
 let refreshInterval: ReturnType<typeof setInterval> | null = null
 
+async function fetchSettings() {
+  try {
+    const response = await api.get('/settings')
+    const data = response.data
+    settings.value = {
+      pharmacy_name: data.pharmacy_name || '',
+      pharmacy_address: data.pharmacy_address || '',
+      pharmacy_phone: data.pharmacy_phone || '',
+      pharmacy_email: data.pharmacy_email || ''
+    }
+  } catch (error) {
+    console.error('Error fetching settings:', error)
+  }
+}
+
 onMounted(() => {
   fetchUnreadAlertsCount()
+  fetchSettings()
   // Refresh every 5 seconds for faster updates
   refreshInterval = setInterval(fetchUnreadAlertsCount, 500)
 })

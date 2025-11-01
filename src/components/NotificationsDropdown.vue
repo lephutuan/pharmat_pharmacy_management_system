@@ -41,15 +41,25 @@
             <div class="flex items-start gap-3">
               <div :class="[
                 'mt-1 flex-shrink-0 w-2 h-2 rounded-full',
-                notification.is_read ? 'bg-gray-300' : 'bg-primary'
+                notification.is_read ? 'bg-gray-300' : (notification.type === 'alert' && notification.severity === 'high' ? 'bg-red-500' : notification.type === 'alert' && notification.severity === 'medium' ? 'bg-orange-500' : 'bg-primary')
               ]"></div>
               <div class="flex-1 min-w-0">
-                <p :class="[
-                  'font-medium text-sm',
-                  notification.is_read ? 'text-gray-700' : 'text-gray-900'
-                ]">
-                  {{ notification.title }}
-                </p>
+                <div class="flex items-center gap-2 mb-1">
+                  <p :class="[
+                    'font-medium text-sm',
+                    notification.is_read ? 'text-gray-700' : 'text-gray-900'
+                  ]">
+                    {{ notification.title }}
+                  </p>
+                  <span v-if="notification.type === 'alert'" :class="[
+                    'px-2 py-0.5 rounded text-xs font-medium',
+                    notification.severity === 'high' ? 'bg-red-100 text-red-700' :
+                    notification.severity === 'medium' ? 'bg-orange-100 text-orange-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  ]">
+                    {{ notification.severity === 'high' ? 'Cao' : notification.severity === 'medium' ? 'Trung bình' : 'Thấp' }}
+                  </span>
+                </div>
                 <p v-if="notification.message" class="text-xs text-gray-600 mt-1 line-clamp-2">
                   {{ notification.message }}
                 </p>
@@ -101,12 +111,18 @@ const notifications = ref<Array<{
   message?: string;
   is_read: boolean;
   created_at: string;
+  type?: 'notification' | 'alert';
+  alert_id?: string;
+  severity?: 'low' | 'medium' | 'high';
 }>>([]);
 const loading = ref(false);
 const unreadCount = ref(0);
 
-async function fetchNotifications() {
-  loading.value = true;
+async function fetchNotifications(silent = false) {
+  // Only show loading on initial fetch or manual refresh
+  if (!silent) {
+    loading.value = true;
+  }
   try {
     const response = await api.get('/notifications', {
       params: {
@@ -198,19 +214,23 @@ watch(() => props.isOpen, (isOpen) => {
   }
 });
 
-// Auto refresh every 3 seconds when open, every 5 seconds when closed
+// Auto refresh - slower to prevent flickering
 let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
   fetchUnreadCount();
+  // Single interval that adjusts based on open state
   refreshInterval = setInterval(() => {
     if (props.isOpen) {
-      fetchNotifications();
+      // Refresh less frequently when open to prevent flickering (10s)
+      // Use silent mode to prevent loading spinner
+      fetchNotifications(true);
       fetchUnreadCount();
     } else {
+      // Refresh count only when closed (5s)
       fetchUnreadCount();
     }
-  }, props.isOpen ? 3000 : 500);
+  }, props.isOpen ? 10000 : 5000);
 });
 
 // Change interval when dropdown opens/closes
@@ -218,14 +238,16 @@ watch(() => props.isOpen, (isOpen) => {
   if (refreshInterval) {
     clearInterval(refreshInterval);
   }
+  // Longer interval when open to prevent flickering
   refreshInterval = setInterval(() => {
     if (props.isOpen) {
-      fetchNotifications();
+      // Use silent mode to prevent loading spinner on background refresh
+      fetchNotifications(true);
       fetchUnreadCount();
     } else {
       fetchUnreadCount();
     }
-  }, isOpen ? 3000 : 5000);
+  }, isOpen ? 10000 : 5000);
 });
 
 onUnmounted(() => {
