@@ -14,14 +14,20 @@
       </button>
 
       <!-- Notifications -->
-      <button class="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
-        @click="showNotifications = !showNotifications">
-        <BellAlertIcon class="w-6 h-6" />
-        <span v-if="unreadAlerts > 0"
-          class="absolute bottom-5 left-5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-          {{ unreadAlerts > 9 ? '9+' : unreadAlerts }}
-        </span>
-      </button>
+      <div class="relative">
+        <button class="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
+          @click="showNotifications = !showNotifications">
+          <BellAlertIcon class="w-6 h-6" />
+          <span v-if="unreadNotificationsCount > 0"
+            class="absolute bottom-5 left-5 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+            {{ unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount }}
+          </span>
+        </button>
+
+        <!-- Notifications Dropdown -->
+        <NotificationsDropdown :is-open="showNotifications" @close="showNotifications = false"
+          @view-all="handleViewAllNotifications" ref="notificationsRef" />
+      </div>
 
       <!-- User Menu -->
       <div class="flex items-center gap-3 pl-4 border-l border-gray-300">
@@ -54,6 +60,7 @@ import { useAuthStore } from '@/stores/auth'
 import { UserRole } from '@/types'
 import { BellAlertIcon } from '@heroicons/vue/24/outline'
 import ChatModal from '@/components/ChatModal.vue'
+import NotificationsDropdown from '@/components/NotificationsDropdown.vue'
 import api from '@/services/api'
 
 const route = useRoute()
@@ -63,22 +70,37 @@ const authStore = useAuthStore()
 const showChat = ref(false)
 const showNotifications = ref(false)
 const hasUnreadMessages = ref(false)
-const unreadAlerts = ref(0)
+const unreadNotificationsCount = ref(0)
+const notificationsRef = ref<InstanceType<typeof NotificationsDropdown> | null>(null)
 
-// Fetch unread alerts count
-async function fetchUnreadCount() {
+// Fetch unread notifications count
+async function fetchUnreadNotificationsCount() {
   try {
-    const response = await api.get('/alerts/unread/count')
-    unreadAlerts.value = response.data.count || 0
+    const response = await api.get('/notifications/unread/count')
+    unreadNotificationsCount.value = response.data.count || 0
   } catch (error) {
-    console.error('Error fetching unread count:', error)
+    console.error('Error fetching unread notifications count:', error)
   }
 }
 
+function handleViewAllNotifications() {
+  router.push('/alerts')
+  showNotifications.value = false
+}
+
 onMounted(() => {
-  fetchUnreadCount()
+  fetchUnreadNotificationsCount()
   // Refresh every 30 seconds
-  setInterval(fetchUnreadCount, 30000)
+  const interval = setInterval(() => {
+    fetchUnreadNotificationsCount()
+    // Also refresh the dropdown if it's open
+    if (notificationsRef.value) {
+      notificationsRef.value.refreshUnreadCount()
+    }
+  }, 30000)
+
+  // Cleanup on unmount
+  return () => clearInterval(interval)
 })
 
 const user = computed(() => authStore.user)

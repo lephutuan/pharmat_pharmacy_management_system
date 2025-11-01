@@ -13,6 +13,7 @@ import membersRoutes from "./routes/members.js";
 import alertsRoutes from "./routes/alerts.js";
 import settingsRoutes from "./routes/settings.js";
 import reportsRoutes from "./routes/reports.js";
+import notificationsRoutes from "./routes/notifications.js";
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/members", membersRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 // Root route - API info
 app.get("/", (req, res) => {
@@ -51,6 +53,7 @@ app.get("/", (req, res) => {
       alerts: "/api/alerts",
       settings: "/api/settings",
       reports: "/api/reports",
+      notifications: "/api/notifications",
     },
   });
 });

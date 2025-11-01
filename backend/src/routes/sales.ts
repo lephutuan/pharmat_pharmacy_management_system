@@ -1,5 +1,10 @@
 import express from "express";
 import pool from "../config/database";
+import { authenticateToken } from "../middleware/auth";
+import { AppError } from "../utils/errors";
+import { handleDatabaseError } from "../utils/dbErrorHandler";
+import { notifyOrderCompleted } from "../utils/notificationHelper";
+import { logger } from "../utils/logger";
 
 const router = express.Router();
 
@@ -109,8 +114,9 @@ router.get("/stats/today", async (req, res) => {
   }
 });
 
-// Create order
-router.post("/", async (req, res) => {
+// Create order (now creates as completed since payment is immediate)
+router.post("/", authenticateToken, async (req, res, next) => {
+  const startTime = Date.now();
   try {
     const {
       customer_id,
@@ -118,6 +124,15 @@ router.post("/", async (req, res) => {
       items,
       discount = 0,
     } = req.body;
+
+    if (!items || items.length === 0) {
+      throw new AppError("Order must have at least one item", 400);
+    }
+
+    const userId = (req as any).user?.id || staff_id;
+    if (!userId) {
+      throw new AppError("Staff ID is required", 400);
+    }
 
     // Calculate totals
     let totalAmount = 0;
@@ -128,11 +143,11 @@ router.post("/", async (req, res) => {
 
     const orderId = `ORD-${Date.now()}`;
 
-    // Create order
+    // Create order with status 'completed' (payment is immediate in pharmacy)
     await pool.execute(
       `INSERT INTO orders (id, customer_id, staff_id, total_amount, discount, final_amount, status) 
-       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-      [orderId, customer_id || null, staff_id, totalAmount, discount, finalAmount]
+       VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
+      [orderId, customer_id || null, userId, totalAmount, discount, finalAmount]
     );
 
     // Create order items
@@ -177,10 +192,90 @@ router.post("/", async (req, res) => {
 
     orderRows[0].items = orderItems;
 
+    // Create notification for staff who created the order
+    try {
+      await notifyOrderCompleted(
+        userId,
+        orderId,
+        finalAmount,
+        orderRows[0].customer_name || null
+      );
+    } catch (notifError) {
+      // Don't fail the order creation if notification fails
+      console.error("Error creating notification:", notifError);
+    }
+
+    // Note: Members are not users, so we don't create notifications for them
+    // If needed in the future, we can create a separate member notifications table
+
+    const duration = Date.now() - startTime;
+    logger.request("POST", "/sales", userId, duration);
+    logger.info("Order created", { orderId, userId, finalAmount });
+
     res.status(201).json(orderRows[0]);
   } catch (error) {
-    console.error("Error creating order:", error);
-    res.status(500).json({ error: "Failed to create order" });
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    handleDatabaseError(error);
+  }
+});
+
+// Update order status
+router.put("/:id/status", authenticateToken, async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const userId = (req as any).user?.id;
+
+    if (!["pending", "completed", "cancelled"].includes(status)) {
+      throw new AppError("Invalid status", 400);
+    }
+
+    // Get order details
+    const [orderRows]: any = await pool.execute(
+      `SELECT o.*, 
+              m.name as customer_name
+       FROM orders o
+       LEFT JOIN members m ON o.customer_id = m.id
+       WHERE o.id = ?`,
+      [req.params.id]
+    );
+
+    if (orderRows.length === 0) {
+      throw new AppError("Order not found", 404);
+    }
+
+    const order = orderRows[0];
+
+    // Update status
+    await pool.execute("UPDATE orders SET status = ? WHERE id = ?", [
+      status,
+      req.params.id,
+    ]);
+
+    // Create notification when order is completed
+    if (status === "completed") {
+      try {
+        // Notify staff who handled the order
+        if (order.staff_id) {
+          await notifyOrderCompleted(
+            order.staff_id,
+            order.id,
+            parseFloat(order.final_amount),
+            order.customer_name || null
+          );
+        }
+      } catch (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
+    }
+
+    res.json({ message: "Order status updated", status });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    handleDatabaseError(error);
   }
 });
 
