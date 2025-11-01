@@ -44,6 +44,7 @@
                 <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Thời Gian</th>
                 <th class="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Tổng Tiền</th>
                 <th class="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Trạng Thái</th>
+                <th class="text-center py-3 px-4 font-semibold text-gray-700 text-sm">Thao Tác</th>
               </tr>
             </thead>
             <tbody>
@@ -63,9 +64,30 @@
                   <span class="font-semibold text-primary">{{ formatCurrency(order.total) }}</span>
                 </td>
                 <td class="py-3 px-4 text-center">
-                  <span class="px-3 py-1 bg-accent/20 text-accent rounded-full text-xs">
-                    {{ order.status }}
+                  <span :class="getStatusBadgeClass(order.status)">
+                    {{ getStatusLabel(order.status) }}
                   </span>
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <div class="flex items-center justify-center gap-2">
+                    <button
+                      v-if="order.status === 'pending'"
+                      @click="confirmOrder(order.id)"
+                      class="px-3 py-1 bg-accent text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
+                      title="Xác nhận/Hoàn thành"
+                    >
+                      Xác nhận
+                    </button>
+                    <button
+                      v-if="order.status === 'pending'"
+                      @click="cancelOrder(order.id)"
+                      class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
+                      title="Hủy đơn hàng"
+                    >
+                      Hủy
+                    </button>
+                    <span v-if="order.status !== 'pending'" class="text-xs text-gray-400">-</span>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -107,7 +129,7 @@ import Modal from '@/components/Modal.vue'
 import OrderForm from '@/components/OrderForm.vue'
 import { useToast } from '@/composables/useToast'
 
-const { success } = useToast()
+const { success, error } = useToast()
 
 const todayStats = ref({
   revenue: 0,
@@ -131,14 +153,14 @@ async function fetchSalesData() {
     }
 
     // Fetch recent orders
-    const ordersResponse = await api.get('/sales', { params: { page: 1, limit: 5 } })
+    const ordersResponse = await api.get('/sales', { params: { page: 1, limit: 10 } })
     recentOrders.value = ordersResponse.data.data.map((order: any) => ({
       id: order.id,
       customer: order.customer_name || 'Khách vãng lai',
       staff: order.staff_name || '',
       total: parseFloat(order.final_amount) || 0,
       date: new Date(order.created_at),
-      status: order.status === 'completed' ? 'Hoàn thành' : order.status
+      status: order.status // Keep original status: 'pending', 'completed', 'cancelled'
     }))
 
     // TODO: Fetch top products from a separate endpoint or calculate from orders
@@ -172,5 +194,59 @@ function formatCurrency(value: number): string {
 
 function formatDateTime(date: Date): string {
   return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'pending':
+      return 'Đang chờ'
+    case 'completed':
+      return 'Hoàn thành'
+    case 'cancelled':
+      return 'Đã hủy'
+    default:
+      return status
+  }
+}
+
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'pending':
+      return 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium'
+    case 'completed':
+      return 'px-3 py-1 bg-accent/20 text-accent rounded-full text-xs font-medium'
+    case 'cancelled':
+      return 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium'
+    default:
+      return 'px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs'
+  }
+}
+
+async function confirmOrder(orderId: string) {
+  if (!confirm('Bạn có chắc chắn muốn xác nhận và hoàn thành đơn hàng này?')) {
+    return
+  }
+
+  try {
+    await api.put(`/sales/${orderId}/status`, { status: 'completed' })
+    success('Đơn hàng đã được xác nhận thành công!')
+    fetchSalesData()
+  } catch (err: any) {
+    error(err.response?.data?.error || 'Lỗi khi xác nhận đơn hàng')
+  }
+}
+
+async function cancelOrder(orderId: string) {
+  if (!confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) {
+    return
+  }
+
+  try {
+    await api.put(`/sales/${orderId}/status`, { status: 'cancelled' })
+    success('Đơn hàng đã được hủy!')
+    fetchSalesData()
+  } catch (err: any) {
+    error(err.response?.data?.error || 'Lỗi khi hủy đơn hàng')
+  }
 }
 </script>

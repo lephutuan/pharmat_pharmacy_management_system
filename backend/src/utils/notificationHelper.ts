@@ -46,3 +46,24 @@ export async function notifyOrderCompleted(
   await createNotification(userId, title, message);
 }
 
+/**
+ * Create notification for order cancellation
+ */
+export async function notifyOrderCancelled(
+  userId: string,
+  orderId: string,
+  finalAmount: number,
+  customerName?: string | null
+): Promise<void> {
+  const formattedAmount = new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND'
+  }).format(finalAmount);
+
+  const title = `Đơn hàng ${orderId} đã bị hủy`;
+  const message = customerName
+    ? `Đơn hàng của khách hàng ${customerName} với tổng giá trị ${formattedAmount} đã bị hủy.`
+    : `Đơn hàng với tổng giá trị ${formattedAmount} đã bị hủy.`;
+
+  await createNotification(userId, title, message);
+}

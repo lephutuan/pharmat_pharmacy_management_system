@@ -3,7 +3,7 @@ import pool from "../config/database";
 import { authenticateToken } from "../middleware/auth";
 import { AppError } from "../utils/errors";
 import { handleDatabaseError } from "../utils/dbErrorHandler";
-import { notifyOrderCompleted } from "../utils/notificationHelper";
+import { notifyOrderCompleted, notifyOrderCancelled } from "../utils/notificationHelper";
 import { logger } from "../utils/logger";
 
 const router = express.Router();
@@ -143,10 +143,10 @@ router.post("/", authenticateToken, async (req, res, next) => {
 
     const orderId = `ORD-${Date.now()}`;
 
-    // Create order with status 'completed' (payment is immediate in pharmacy)
+    // Create order with status 'pending' (needs confirmation)
     await pool.execute(
       `INSERT INTO orders (id, customer_id, staff_id, total_amount, discount, final_amount, status) 
-       VALUES (?, ?, ?, ?, ?, ?, 'completed')`,
+       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
       [orderId, customer_id || null, userId, totalAmount, discount, finalAmount]
     );
 
@@ -192,21 +192,7 @@ router.post("/", authenticateToken, async (req, res, next) => {
 
     orderRows[0].items = orderItems;
 
-    // Create notification for staff who created the order
-    try {
-      await notifyOrderCompleted(
-        userId,
-        orderId,
-        finalAmount,
-        orderRows[0].customer_name || null
-      );
-    } catch (notifError) {
-      // Don't fail the order creation if notification fails
-      console.error("Error creating notification:", notifError);
-    }
-
-    // Note: Members are not users, so we don't create notifications for them
-    // If needed in the future, we can create a separate member notifications table
+    // Don't create notification when order is pending - will be created when completed
 
     const duration = Date.now() - startTime;
     logger.request("POST", "/sales", userId, duration);
@@ -253,21 +239,27 @@ router.put("/:id/status", authenticateToken, async (req, res, next) => {
       req.params.id,
     ]);
 
-    // Create notification when order is completed
-    if (status === "completed") {
-      try {
-        // Notify staff who handled the order
-        if (order.staff_id) {
+    // Create notification based on status
+    try {
+      if (order.staff_id) {
+        if (status === "completed") {
           await notifyOrderCompleted(
             order.staff_id,
             order.id,
             parseFloat(order.final_amount),
             order.customer_name || null
           );
+        } else if (status === "cancelled") {
+          await notifyOrderCancelled(
+            order.staff_id,
+            order.id,
+            parseFloat(order.final_amount),
+            order.customer_name || null
+          );
         }
-      } catch (notifError) {
-        console.error("Error creating notification:", notifError);
       }
+    } catch (notifError) {
+      console.error("Error creating notification:", notifError);
     }
 
     res.json({ message: "Order status updated", status });
