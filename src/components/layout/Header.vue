@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { Teleport } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -90,18 +90,35 @@ function handleViewAllNotifications() {
 
 onMounted(() => {
   fetchUnreadNotificationsCount()
-  // Refresh every 30 seconds
+  // Refresh every 5 seconds for faster updates
   const interval = setInterval(() => {
     fetchUnreadNotificationsCount()
     // Also refresh the dropdown if it's open
     if (notificationsRef.value) {
       notificationsRef.value.refreshUnreadCount()
     }
-  }, 30000)
+  }, 500)
 
   // Cleanup on unmount
   return () => clearInterval(interval)
 })
+
+// Refresh when route changes or when user returns to page
+watch(() => route.path, () => {
+  fetchUnreadNotificationsCount()
+})
+
+// Refresh when page becomes visible (user switches tabs back)
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      fetchUnreadNotificationsCount()
+      if (notificationsRef.value) {
+        notificationsRef.value.refreshUnreadCount()
+      }
+    }
+  })
+}
 
 const user = computed(() => authStore.user)
 
