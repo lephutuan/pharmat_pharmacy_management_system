@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-title text-gray-800">Quản Lý Thành Viên</h1>
-      <button class="btn-primary">
+      <button @click="openAddModal" class="btn-primary">
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
@@ -85,91 +85,119 @@
           placeholder="Số điện thoại..."
           class="input-field"
         />
-        <button class="btn-secondary">Lọc</button>
       </div>
     </div>
 
     <!-- Members Table -->
     <div class="card">
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-gray-200">
-              <th class="text-left py-3 px-4 font-semibold text-gray-700">Thành Viên</th>
-              <th class="text-left py-3 px-4 font-semibold text-gray-700">Điện Thoại</th>
-              <th class="text-left py-3 px-4 font-semibold text-gray-700">Hạng</th>
-              <th class="text-left py-3 px-4 font-semibold text-gray-700">Điểm Tích Lũy</th>
-              <th class="text-left py-3 px-4 font-semibold text-gray-700">Ngày Tham Gia</th>
-              <th class="text-center py-3 px-4 font-semibold text-gray-700">Thao Tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="member in filteredMembers"
-              :key="member.id"
-              class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-            >
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-3">
-                  <img
-                    :src="`https://ui-avatars.com/api/?name=${member.name}&background=${getLevelColor(member.level)}&color=fff`"
-                    :alt="member.name"
-                    class="w-10 h-10 rounded-full"
-                  />
-                  <div>
-                    <p class="font-medium text-gray-800">{{ member.name }}</p>
-                    <p v-if="member.email" class="text-xs text-gray-500">{{ member.email }}</p>
-                  </div>
-                </div>
-              </td>
-              <td class="py-3 px-4 text-gray-600">{{ member.phone }}</td>
-              <td class="py-3 px-4">
-                <span :class="getLevelBadgeClass(member.level)">
-                  {{ getLevelLabel(member.level) }}
-                </span>
-              </td>
-              <td class="py-3 px-4">
-                <span class="font-semibold text-primary">{{ member.points.toLocaleString() }} điểm</span>
-              </td>
-              <td class="py-3 px-4 text-gray-600">{{ formatDate(member.createdAt) }}</td>
-              <td class="py-3 px-4">
-                <div class="flex items-center justify-center gap-2">
-                  <button class="text-primary hover:text-blue-700" title="Xem chi tiết">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </button>
-                  <button class="text-accent hover:text-green-700" title="Sửa">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Loading State -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p class="mt-4 text-gray-600">Đang tải dữ liệu...</p>
       </div>
 
-      <!-- Pagination -->
-      <div class="mt-6 flex items-center justify-between">
-        <p class="text-sm text-gray-600">Hiển thị 1-{{ filteredMembers.length }} trong tổng số {{ totalMembers }} thành viên</p>
-        <div class="flex gap-2">
-          <button class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Trước</button>
-          <button class="px-3 py-1 bg-primary text-white rounded-lg">1</button>
-          <button class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">2</button>
-          <button class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">Sau</button>
-        </div>
+      <!-- Empty State -->
+      <div v-else-if="pagedMembers.length === 0" class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <p class="mt-4 text-gray-600 font-medium">Không tìm thấy thành viên nào</p>
       </div>
+
+      <!-- Table Content -->
+      <template v-else>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Thành Viên</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Điện Thoại</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Hạng</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Điểm Tích Lũy</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Ngày Tham Gia</th>
+                <th class="text-center py-3 px-4 font-semibold text-gray-700">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="member in pagedMembers"
+                :key="member.id"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              >
+                <td class="py-3 px-4">
+                  <div class="flex items-center gap-3">
+                    <img
+                      :src="`https://ui-avatars.com/api/?name=${member.name}&background=${getLevelColor(member.level)}&color=fff`"
+                      :alt="member.name"
+                      class="w-10 h-10 rounded-full"
+                    />
+                    <div>
+                      <p class="font-medium text-gray-800">{{ member.name }}</p>
+                      <p v-if="member.email" class="text-xs text-gray-500">{{ member.email }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-3 px-4 text-gray-600">{{ member.phone }}</td>
+                <td class="py-3 px-4">
+                  <span :class="getLevelBadgeClass(member.level)">
+                    {{ getLevelLabel(member.level) }}
+                  </span>
+                </td>
+                <td class="py-3 px-4">
+                  <span class="font-semibold text-primary">{{ member.points.toLocaleString() }} điểm</span>
+                </td>
+                <td class="py-3 px-4 text-gray-600">{{ formatDate(member.createdAt) }}</td>
+                <td class="py-3 px-4">
+                  <div class="flex items-center justify-center gap-2">
+                    <button @click="openEditModal(member)" class="text-accent hover:text-green-700" title="Sửa">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-6 flex items-center justify-between">
+          <p class="text-sm text-gray-600">
+            Hiển thị
+            {{ (currentPage - 1) * pageSize + (pagedMembers.length ? 1 : 0) }}-
+            {{ (currentPage - 1) * pageSize + pagedMembers.length }}
+            trong tổng số {{ filteredMembers.length }} kết quả
+          </p>
+          <div class="flex gap-2">
+            <button :disabled="currentPage === 1" @click="currentPage--"
+              class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Trước</button>
+            <button v-for="n in totalPages" :key="n" class="px-3 py-1"
+              :class="n === currentPage ? 'bg-primary text-white rounded-lg' : 'border border-gray-300 rounded-lg hover:bg-gray-50'"
+              @click="currentPage = n">{{ n }}</button>
+            <button :disabled="currentPage === totalPages" @click="currentPage++"
+              class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Sau</button>
+          </div>
+        </div>
+      </template>
     </div>
+
+    <!-- Member Modal -->
+    <Modal v-model="showModal" :title="editingMember ? 'Sửa Thành Viên' : 'Thêm Thành Viên Mới'">
+      <MemberForm :member="editingMember" @success="handleFormSuccess" @cancel="closeModal" />
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import type { Member } from '@/types'
 import api from '@/services/api'
+import Modal from '@/components/Modal.vue'
+import MemberForm from '@/components/MemberForm.vue'
+import { useToast } from '@/composables/useToast'
+
+const { success } = useToast()
 
 const searchQuery = ref('')
 const levelFilter = ref('')
@@ -177,6 +205,11 @@ const phoneQuery = ref('')
 const members = ref<Member[]>([])
 const loading = ref(false)
 const totalItems = ref(0)
+const showModal = ref(false)
+const editingMember = ref<Member | null>(null)
+
+const pageSize = ref(10)
+const currentPage = ref(1)
 
 const totalMembers = computed(() => totalItems.value)
 const goldMembers = computed(() => members.value.filter(m => m.level === 'gold').length)
@@ -190,8 +223,8 @@ async function fetchMembers() {
       params: {
         search: searchQuery.value || undefined,
         level: levelFilter.value || undefined,
-        page: 1,
-        limit: 100
+        page: currentPage.value,
+        limit: pageSize.value
       }
     })
     members.value = response.data.data.map((item: any) => ({
@@ -220,6 +253,45 @@ const filteredMembers = computed(() => {
     return matchesSearch && matchesLevel && matchesPhone
   })
 })
+
+const pagedMembers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredMembers.value.slice(start, end)
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredMembers.value.length / pageSize.value)))
+
+watch([searchQuery, levelFilter, phoneQuery], () => {
+  currentPage.value = 1
+  fetchMembers()
+})
+
+watch(currentPage, () => {
+  fetchMembers()
+})
+
+// Modal handlers
+function openAddModal() {
+  editingMember.value = null
+  showModal.value = true
+}
+
+function openEditModal(member: Member) {
+  editingMember.value = member
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+  editingMember.value = null
+}
+
+function handleFormSuccess() {
+  closeModal()
+  fetchMembers()
+  success('Thành viên đã được lưu thành công!')
+}
 
 onMounted(() => {
   fetchMembers()

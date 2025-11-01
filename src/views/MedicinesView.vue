@@ -11,15 +11,21 @@
       </button>
     </div>
 
-    <!-- Filters -->
+    <!-- Advanced Filters -->
     <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-800">Bộ Lọc Nâng Cao</h3>
+        <button @click="showAdvancedFilters = !showAdvancedFilters" class="text-sm text-primary hover:underline">
+          {{ showAdvancedFilters ? 'Thu gọn' : 'Mở rộng' }}
+        </button>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input v-model="searchQuery" type="text" placeholder="Tìm kiếm thuốc..." class="input-field" />
-        <select v-model="selectedCategory" class="input-field">
+        <input v-model="searchQuery" type="text" placeholder="Tìm kiếm theo tên, mã vạch..." class="input-field"
+          @input="debounceSearch" />
+        <select v-model="selectedCategory" class="input-field" @change="fetchMedicines">
           <option value="">Tất cả danh mục</option>
-          <option value="Kháng sinh">Kháng sinh</option>
-          <option value="Giảm đau">Giảm đau</option>
-          <option value="Vitamin">Vitamin</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
         </select>
         <select v-model="stockFilter" class="input-field">
           <option value="">Tất cả trạng thái</option>
@@ -28,15 +34,43 @@
           <option value="expiring">Sắp hết hạn</option>
           <option value="available">Còn hàng</option>
         </select>
+        <button @click="resetFilters" class="btn-secondary">
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Đặt lại
+        </button>
+      </div>
+
+      <!-- Advanced Filters Panel -->
+      <div v-if="showAdvancedFilters" class="mt-4 pt-4 border-t border-gray-200">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Khoảng giá từ</label>
+            <input v-model.number="priceMin" type="number" min="0" step="1000" class="input-field" placeholder="0" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Đến</label>
+            <input v-model.number="priceMax" type="number" min="0" step="1000" class="input-field"
+              placeholder="Không giới hạn" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Số lượng tối thiểu</label>
+            <input v-model.number="quantityMin" type="number" min="0" class="input-field" placeholder="0" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Nhà sản xuất</label>
+            <input v-model="manufacturerFilter" type="text" class="input-field" placeholder="Tìm theo NSX..." />
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Table -->
     <div class="card">
       <!-- Loading State -->
-      <div v-if="loading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p class="mt-4 text-gray-600">Đang tải dữ liệu...</p>
+      <div v-if="loading" class="py-12">
+        <SkeletonLoader type="table" :rows="6" :columns="7" />
       </div>
 
       <!-- Empty State -->
@@ -143,6 +177,7 @@ import type { Medicine } from '@/types'
 import api from '@/services/api'
 import Modal from '@/components/Modal.vue'
 import MedicineForm from '@/components/MedicineForm.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useToast } from '@/composables/useToast'
 
 const { success, error } = useToast()
@@ -150,11 +185,39 @@ const { success, error } = useToast()
 const searchQuery = ref('')
 const selectedCategory = ref('')
 const stockFilter = ref('')
+const showAdvancedFilters = ref(false)
+const priceMin = ref<number | undefined>(undefined)
+const priceMax = ref<number | undefined>(undefined)
+const quantityMin = ref<number | undefined>(undefined)
+const manufacturerFilter = ref('')
+const categories = ref<Array<{ id: number; name: string }>>([])
 const medicines = ref<Medicine[]>([])
 const loading = ref(false)
 const totalItems = ref(0)
 const showModal = ref(false)
 const editingMedicine = ref<Medicine | null>(null)
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+function debounceSearch() {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    fetchMedicines()
+  }, 500)
+}
+
+function resetFilters() {
+  searchQuery.value = ''
+  selectedCategory.value = ''
+  stockFilter.value = ''
+  priceMin.value = undefined
+  priceMax.value = undefined
+  quantityMin.value = undefined
+  manufacturerFilter.value = ''
+  fetchMedicines()
+}
 
 // Fetch medicines from API
 async function fetchMedicines() {
@@ -192,11 +255,24 @@ async function fetchMedicines() {
   }
 }
 
-// Client-side filtering (can be removed if using backend filtering only)
+// Fetch categories
+async function fetchCategories() {
+  try {
+    const response = await api.get('/medicines/categories')
+    categories.value = response.data
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+  }
+}
+
+// Client-side filtering with advanced options
 const filteredMedicines = computed(() => {
   return medicines.value.filter(med => {
-    // Lọc theo tìm kiếm
-    const matchesSearch = !searchQuery.value || med.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    // Lọc theo tìm kiếm (tên, barcode)
+    const searchLower = searchQuery.value.toLowerCase()
+    const matchesSearch = !searchQuery.value ||
+      med.name.toLowerCase().includes(searchLower) ||
+      (med.barcode && med.barcode.toLowerCase().includes(searchLower))
 
     // Lọc theo danh mục
     const matchesCategory = !selectedCategory.value || med.category === selectedCategory.value
@@ -217,7 +293,14 @@ const filteredMedicines = computed(() => {
       }
     }
 
-    return matchesSearch && matchesCategory && matchesStock
+    // Advanced filters
+    const matchesPrice = (!priceMin.value || med.price >= priceMin.value) &&
+      (!priceMax.value || med.price <= priceMax.value)
+    const matchesQuantity = !quantityMin.value || med.quantity >= quantityMin.value
+    const matchesManufacturer = !manufacturerFilter.value ||
+      (med.manufacturer && med.manufacturer.toLowerCase().includes(manufacturerFilter.value.toLowerCase()))
+
+    return matchesSearch && matchesCategory && matchesStock && matchesPrice && matchesQuantity && matchesManufacturer
   })
 })
 
@@ -236,13 +319,13 @@ watch(filteredMedicines, () => { currentPage.value = 1 })
 
 // Fetch on mount
 onMounted(() => {
+  fetchCategories()
   fetchMedicines()
 })
 
-// Watch for filter changes (optional - can refetch from backend)
-watch([searchQuery, selectedCategory, stockFilter], () => {
-  // Uncomment to refetch from backend on filter change
-  // fetchMedicines()
+// Watch for filter changes
+watch([selectedCategory, stockFilter, priceMin, priceMax, quantityMin, manufacturerFilter], () => {
+  currentPage.value = 1
 })
 
 // Modal handlers

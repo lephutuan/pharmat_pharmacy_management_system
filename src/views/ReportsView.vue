@@ -3,18 +3,37 @@
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-title text-gray-800">Báo Cáo & Phân Tích</h1>
       <div class="flex gap-3">
-        <button class="btn-outline">
-          <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Xuất PDF
-        </button>
-        <button class="btn-outline">
-          <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Xuất Excel
-        </button>
+        <div class="flex gap-2">
+          <select v-model="selectedMonth" @change="fetchReports" class="input-field">
+            <option :value="1">Tháng 1</option>
+            <option :value="2">Tháng 2</option>
+            <option :value="3">Tháng 3</option>
+            <option :value="4">Tháng 4</option>
+            <option :value="5">Tháng 5</option>
+            <option :value="6">Tháng 6</option>
+            <option :value="7">Tháng 7</option>
+            <option :value="8">Tháng 8</option>
+            <option :value="9">Tháng 9</option>
+            <option :value="10">Tháng 10</option>
+            <option :value="11">Tháng 11</option>
+            <option :value="12">Tháng 12</option>
+          </select>
+          <input v-model.number="selectedYear" @change="fetchReports" type="number" min="2020" :max="new Date().getFullYear()" class="input-field w-32" />
+        </div>
+        <div class="flex gap-3">
+          <button @click="exportPDF" class="btn-outline">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Xuất PDF
+          </button>
+          <button @click="exportExcel" class="btn-outline">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Xuất Excel
+          </button>
+        </div>
       </div>
     </div>
 
@@ -23,12 +42,12 @@
       <div class="card bg-gradient-primary text-white">
         <p class="text-sm opacity-90 mb-2">Doanh Thu Tháng Này</p>
         <p class="text-3xl font-bold">{{ formatCurrency(monthlyRevenue) }}</p>
-        <p class="text-sm mt-2 opacity-75">+15.3% so với tháng trước</p>
+        <p class="text-sm mt-2 opacity-75">Tháng {{ selectedMonth }}/{{ selectedYear }}</p>
       </div>
       <div class="card bg-gradient-to-r from-green-500 to-green-600 text-white">
         <p class="text-sm opacity-90 mb-2">Số Đơn Hàng</p>
         <p class="text-3xl font-bold">{{ totalOrders }}</p>
-        <p class="text-sm mt-2 opacity-75">Trung bình: {{ averageOrder }}đ/đơn</p>
+        <p class="text-sm mt-2 opacity-75">Trung bình: {{ formatCurrency(averageOrder) }}</p>
       </div>
       <div class="card bg-gradient-to-r from-blue-500 to-blue-600 text-white">
         <p class="text-sm opacity-90 mb-2">Sản Phẩm Bán Được</p>
@@ -38,7 +57,7 @@
       <div class="card bg-gradient-to-r from-purple-500 to-purple-600 text-white">
         <p class="text-sm opacity-90 mb-2">Khách Hàng Mới</p>
         <p class="text-3xl font-bold">{{ newCustomers }}</p>
-        <p class="text-sm mt-2 opacity-75">Tăng 8% so với tháng trước</p>
+        <p class="text-sm mt-2 opacity-75">Tháng {{ selectedMonth }}/{{ selectedYear }}</p>
       </div>
     </div>
 
@@ -47,7 +66,13 @@
       <!-- Sales Chart -->
       <div class="card">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Doanh Thu Theo Ngày</h3>
-        <div class="h-64 flex items-end justify-between gap-2">
+        <div v-if="loading" class="h-64">
+          <SkeletonLoader type="default" />
+        </div>
+        <div v-else-if="dailySales.length === 0" class="h-64 flex items-center justify-center text-gray-500">
+          Không có dữ liệu
+        </div>
+        <div v-else class="h-64 flex items-end justify-between gap-2">
           <div
             v-for="(day, index) in dailySales"
             :key="index"
@@ -55,7 +80,7 @@
           >
             <div
               class="w-full bg-gradient-to-t from-primary to-secondary rounded-t-lg hover:opacity-80 transition-all cursor-pointer"
-              :style="{ height: `${(day.value / Math.max(...dailySales.map(d => d.value))) * 100}%` }"
+              :style="{ height: dailySales.length > 0 ? `${(day.value / Math.max(...dailySales.map(d => d.value || 1), 1)) * 100}%` : '0%' }"
               :title="formatCurrency(day.value)"
             ></div>
             <span class="text-xs text-gray-600 mt-2">{{ day.label }}</span>
@@ -66,7 +91,13 @@
       <!-- Category Distribution -->
       <div class="card">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Phân Bố Danh Mục</h3>
-        <div class="space-y-4">
+        <div v-if="loading">
+          <SkeletonLoader type="default" />
+        </div>
+        <div v-else-if="categorySales.length === 0" class="text-center py-8 text-gray-500">
+          Không có dữ liệu
+        </div>
+        <div v-else class="space-y-4">
           <div v-for="category in categorySales" :key="category.name" class="space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-gray-700">{{ category.name }}</span>
@@ -75,7 +106,7 @@
             <div class="w-full bg-gray-200 rounded-full h-2">
               <div
                 :class="['h-2 rounded-full transition-all', category.color]"
-                :style="{ width: `${(category.value / Math.max(...categorySales.map(c => c.value))) * 100}%` }"
+                :style="{ width: categorySales.length > 0 ? `${(category.value / Math.max(...categorySales.map(c => c.value || 1), 1)) * 100}%` : '0%' }"
               ></div>
             </div>
           </div>
@@ -121,6 +152,9 @@
                 </div>
               </td>
             </tr>
+            <tr v-if="topProducts.length === 0 && !loading">
+              <td colspan="6" class="py-8 text-center text-gray-500">Không có dữ liệu</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -129,42 +163,124 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import api from '@/services/api'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import { exportToPDF, exportToExcel } from '@/utils/export'
+import { useToast } from '@/composables/useToast'
 
-const monthlyRevenue = 145_000_000
-const totalOrders = 486
-const averageOrder = 298_354
-const itemsSold = 1245
-const topCategory = 'Giảm đau'
-const newCustomers = 89
+const loading = ref(false)
+const monthlyRevenue = ref(0)
+const totalOrders = ref(0)
+const averageOrder = ref(0)
+const itemsSold = ref(0)
+const topCategory = ref('N/A')
+const newCustomers = ref(0)
 
-const dailySales = [
-  { label: '1', value: 4_200_000 },
-  { label: '2', value: 5_100_000 },
-  { label: '3', value: 4_800_000 },
-  { label: '4', value: 6_200_000 },
-  { label: '5', value: 5_900_000 },
-  { label: '6', value: 7_300_000 },
-  { label: '7', value: 6_800_000 }
-]
+const dailySales = ref<Array<{ label: string; value: number }>>([])
+const categorySales = ref<Array<{ name: string; value: number; color: string }>>([])
+const topProducts = ref<Array<{ id: string; name: string; category: string; quantity: number; revenue: number; percentage: number }>>([])
 
-const categorySales = [
-  { name: 'Giảm đau', value: 45_000_000, color: 'bg-blue-500' },
-  { name: 'Kháng sinh', value: 35_000_000, color: 'bg-green-500' },
-  { name: 'Vitamin', value: 28_000_000, color: 'bg-yellow-500' },
-  { name: 'Khác', value: 37_000_000, color: 'bg-purple-500' }
-]
+const selectedMonth = ref(new Date().getMonth() + 1)
+const selectedYear = ref(new Date().getFullYear())
+const { success, error } = useToast()
 
-const topProducts = [
-  { id: 1, name: 'Paracetamol 500mg', category: 'Giảm đau', quantity: 156, revenue: 2_340_000, percentage: 18.5 },
-  { id: 2, name: 'Amoxicillin 500mg', category: 'Kháng sinh', quantity: 89, revenue: 4_005_000, percentage: 15.2 },
-  { id: 3, name: 'Vitamin C 1000mg', category: 'Vitamin', quantity: 120, revenue: 3_000_000, percentage: 12.8 },
-  { id: 4, name: 'Ibuprofen 400mg', category: 'Giảm đau', quantity: 78, revenue: 1_950_000, percentage: 10.5 },
-  { id: 5, name: 'Aspirin 75mg', category: 'Giảm đau', quantity: 95, revenue: 1_140_000, percentage: 9.2 }
-]
+const categoryColors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500']
+
+async function fetchReports() {
+  loading.value = true
+  try {
+    // Fetch comprehensive report
+    const comprehensiveRes = await api.get('/reports/comprehensive', {
+      params: { month: selectedMonth.value, year: selectedYear.value }
+    })
+    const data = comprehensiveRes.data
+    monthlyRevenue.value = data.monthlyRevenue || 0
+    totalOrders.value = data.totalOrders || 0
+    averageOrder.value = data.averageOrder || 0
+    itemsSold.value = data.itemsSold || 0
+    topCategory.value = data.topCategory || 'N/A'
+    newCustomers.value = data.newCustomers || 0
+
+    // Fetch daily sales
+    const dailyRes = await api.get('/reports/daily-sales', {
+      params: { month: selectedMonth.value, year: selectedYear.value }
+    })
+    dailySales.value = dailyRes.data.map((item: any) => ({
+      label: String(item.day),
+      value: parseFloat(item.revenue) || 0
+    }))
+
+    // Fetch category sales
+    const categoryRes = await api.get('/reports/category-sales', {
+      params: { month: selectedMonth.value, year: selectedYear.value }
+    })
+    categorySales.value = categoryRes.data.map((item: any, index: number) => ({
+      name: item.category_name,
+      value: parseFloat(item.revenue) || 0,
+      color: categoryColors[index % categoryColors.length]
+    }))
+
+    // Fetch top products
+    const productsRes = await api.get('/reports/top-products', {
+      params: { month: selectedMonth.value, year: selectedYear.value, limit: 10 }
+    })
+    topProducts.value = productsRes.data.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category_name,
+      quantity: parseInt(item.quantity_sold) || 0,
+      revenue: parseFloat(item.revenue) || 0,
+      percentage: parseFloat(item.percentage) || 0
+    }))
+  } catch (error) {
+    console.error('Error fetching reports:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
 }
+
+async function exportPDF() {
+  try {
+    const reportData = {
+      'Doanh thu tháng': formatCurrency(monthlyRevenue.value),
+      'Số đơn hàng': totalOrders.value,
+      'Trung bình/đơn': formatCurrency(averageOrder.value),
+      'Sản phẩm bán được': itemsSold.value,
+      'Danh mục bán chạy': topCategory.value,
+      'Khách hàng mới': newCustomers.value,
+    };
+    await exportToPDF(reportData, `Báo cáo tháng ${selectedMonth.value}/${selectedYear.value}`);
+    success('Xuất PDF thành công!');
+  } catch (err: any) {
+    error(err.message || 'Lỗi khi xuất PDF');
+  }
+}
+
+async function exportExcel() {
+  try {
+    const headers = ['STT', 'Tên sản phẩm', 'Danh mục', 'Số lượng', 'Doanh thu', 'Tỷ lệ %'];
+    const excelData = topProducts.value.map((product, index) => ({
+      'STT': index + 1,
+      'Tên sản phẩm': product.name,
+      'Danh mục': product.category,
+      'Số lượng': product.quantity,
+      'Doanh thu': product.revenue,
+      'Tỷ lệ %': product.percentage,
+    }));
+    await exportToExcel(excelData, `Báo cáo sản phẩm ${selectedMonth.value}-${selectedYear.value}`, headers);
+    success('Xuất Excel thành công!');
+  } catch (err: any) {
+    error(err.message || 'Lỗi khi xuất Excel');
+  }
+}
+
+onMounted(() => {
+  fetchReports()
+})
 </script>
 
