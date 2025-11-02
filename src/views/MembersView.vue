@@ -11,7 +11,7 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="card">
         <div class="flex items-center justify-between">
           <div>
@@ -20,45 +20,94 @@
           </div>
           <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
             <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           </div>
         </div>
       </div>
 
-      <div class="card bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+      <div class="card bg-gradient-to-r from-blue-600 to-blue-500 text-white">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm opacity-90">Thành Viên Vàng</p>
-            <p class="text-3xl font-bold">{{ goldMembers }}</p>
-          </div>
-          <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-          </svg>
-        </div>
-      </div>
-
-      <div class="card bg-gradient-to-r from-blue-gray-500 to-blue-gray-600 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm opacity-90">Thành Viên Bạc</p>
-            <p class="text-3xl font-bold">{{ silverMembers }}</p>
-          </div>
-          <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-      </div>
-
-      <div class="card bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm opacity-90">Điểm Tích Lũy</p>
+            <p class="text-sm opacity-90">Tổng Điểm Tích Lũy</p>
             <p class="text-3xl font-bold">{{ totalPoints.toLocaleString() }}</p>
           </div>
           <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
           </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Member Levels Info -->
+    <div class="card">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Thông Tin Hạng Thành Viên</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Bronze -->
+        <div class="p-4 rounded-lg border-2 border-amber-500 bg-amber-50">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-amber-800">Đồng</h4>
+            <span class="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded">{{ bronzeMembers }} thành viên</span>
+          </div>
+          <div class="space-y-1 text-sm">
+            <p class="text-gray-700"><span class="font-medium">Giảm giá:</span> <span
+                class="text-amber-700 font-semibold">2%</span> (Tối đa 20,000đ)</p>
+            <p class="text-gray-700"><span class="font-medium">Điểm/10k:</span> <span
+                class="text-amber-700 font-semibold">5 điểm</span></p>
+            <p class="text-gray-700"><span class="font-medium">Nâng cấp:</span> <span
+                class="text-amber-700 font-semibold">500 điểm</span> → Bạc</p>
+          </div>
+        </div>
+
+        <!-- Silver -->
+        <div class="p-4 rounded-lg border-2 border-gray-400 bg-gray-50">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-gray-800">Bạc</h4>
+            <span class="text-xs bg-gray-200 text-gray-800 px-2 py-1 rounded">{{ silverMembers }} thành viên</span>
+          </div>
+          <div class="space-y-1 text-sm">
+            <p class="text-gray-700"><span class="font-medium">Giảm giá:</span> <span
+                class="text-gray-700 font-semibold">5%</span> (Tối đa 50,000đ)</p>
+            <p class="text-gray-700"><span class="font-medium">Điểm/10k:</span> <span
+                class="text-gray-700 font-semibold">10 điểm</span></p>
+            <p class="text-gray-700"><span class="font-medium">Nâng cấp:</span> <span
+                class="text-gray-700 font-semibold">1,000 điểm</span> → Vàng</p>
+          </div>
+        </div>
+
+        <!-- Gold -->
+        <div class="p-4 rounded-lg border-2 border-yellow-500 bg-yellow-50">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-yellow-800">Vàng</h4>
+            <span class="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">{{ goldMembers }} thành viên</span>
+          </div>
+          <div class="space-y-1 text-sm">
+            <p class="text-gray-700"><span class="font-medium">Giảm giá:</span> <span
+                class="text-yellow-700 font-semibold">8%</span> (Tối đa 100,000đ)</p>
+            <p class="text-gray-700"><span class="font-medium">Điểm/10k:</span> <span
+                class="text-yellow-700 font-semibold">15 điểm</span></p>
+            <p class="text-gray-700"><span class="font-medium">Nâng cấp:</span> <span
+                class="text-yellow-700 font-semibold">2,000 điểm</span> → Bạch Kim</p>
+          </div>
+        </div>
+
+        <!-- Platinum -->
+        <div class="p-4 rounded-lg border-2 border-purple-500 bg-purple-50">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-purple-800">Bạch Kim</h4>
+            <span class="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded">{{ platinumMembers }} thành
+              viên</span>
+          </div>
+          <div class="space-y-1 text-sm">
+            <p class="text-gray-700"><span class="font-medium">Giảm giá:</span> <span
+                class="text-purple-700 font-semibold">12%</span> (Tối đa 200,000đ)</p>
+            <p class="text-gray-700"><span class="font-medium">Điểm/10k:</span> <span
+                class="text-purple-700 font-semibold">20 điểm</span></p>
+            <p class="text-gray-700"><span class="font-medium">Nâng cấp:</span> <span
+                class="text-purple-700 font-semibold">Cấp cao nhất</span></p>
+          </div>
         </div>
       </div>
     </div>
@@ -66,12 +115,7 @@
     <!-- Filter -->
     <div class="card">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Tìm kiếm theo tên, SĐT..."
-          class="input-field"
-        />
+        <input v-model="searchQuery" type="text" placeholder="Tìm kiếm theo tên, SĐT..." class="input-field" />
         <select v-model="levelFilter" class="input-field">
           <option value="">Tất cả hạng</option>
           <option value="bronze">Đồng</option>
@@ -79,12 +123,7 @@
           <option value="gold">Vàng</option>
           <option value="platinum">Bạch kim</option>
         </select>
-        <input
-          v-model="phoneQuery"
-          type="text"
-          placeholder="Số điện thoại..."
-          class="input-field"
-        />
+        <input v-model="phoneQuery" type="text" placeholder="Số điện thoại..." class="input-field" />
       </div>
     </div>
 
@@ -99,7 +138,8 @@
       <!-- Empty State -->
       <div v-else-if="pagedMembers.length === 0" class="text-center py-12">
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
         <p class="mt-4 text-gray-600 font-medium">Không tìm thấy thành viên nào</p>
       </div>
@@ -119,18 +159,13 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="member in pagedMembers"
-                :key="member.id"
-                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
+              <tr v-for="member in pagedMembers" :key="member.id"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4">
                   <div class="flex items-center gap-3">
                     <img
                       :src="`https://ui-avatars.com/api/?name=${member.name}&background=${getLevelColor(member.level)}&color=fff`"
-                      :alt="member.name"
-                      class="w-10 h-10 rounded-full"
-                    />
+                      :alt="member.name" class="w-10 h-10 rounded-full" />
                     <div>
                       <p class="font-medium text-gray-800">{{ member.name }}</p>
                       <p v-if="member.email" class="text-xs text-gray-500">{{ member.email }}</p>
@@ -151,7 +186,8 @@
                   <div class="flex items-center justify-center gap-2">
                     <button @click="openEditModal(member)" class="text-accent hover:text-green-700" title="Sửa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
                   </div>
@@ -212,8 +248,10 @@ const pageSize = ref(10)
 const currentPage = ref(1)
 
 const totalMembers = computed(() => totalItems.value)
-const goldMembers = computed(() => members.value.filter(m => m.level === 'gold').length)
+const bronzeMembers = computed(() => members.value.filter(m => m.level === 'bronze').length)
 const silverMembers = computed(() => members.value.filter(m => m.level === 'silver').length)
+const goldMembers = computed(() => members.value.filter(m => m.level === 'gold').length)
+const platinumMembers = computed(() => members.value.filter(m => m.level === 'platinum').length)
 const totalPoints = computed(() => members.value.reduce((sum, m) => sum + m.points, 0))
 
 async function fetchMembers() {
@@ -346,4 +384,3 @@ function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('vi-VN')
 }
 </script>
-

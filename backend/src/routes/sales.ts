@@ -5,6 +5,11 @@ import { AppError } from "../utils/errors";
 import { handleDatabaseError } from "../utils/dbErrorHandler";
 import { notifyOrderCompleted, notifyOrderCancelled } from "../utils/notificationHelper";
 import { logger } from "../utils/logger";
+import { 
+  calculateMemberDiscount, 
+  calculatePointsToAdd, 
+  getUpgradeLevel 
+} from "../utils/memberHelper";
 
 const router = express.Router();
 
@@ -139,7 +144,24 @@ router.post("/", authenticateToken, async (req, res, next) => {
     for (const item of items) {
       totalAmount += item.quantity * item.price;
     }
-    const finalAmount = totalAmount - discount;
+
+    // Calculate member discount if customer is a member
+    let memberDiscount = discount;
+    let memberLevel: string | null = null;
+    if (customer_id) {
+      const [memberRows]: any = await pool.execute(
+        "SELECT level FROM members WHERE id = ?",
+        [customer_id]
+      );
+      if (memberRows.length > 0) {
+        memberLevel = memberRows[0].level;
+        const autoDiscount = calculateMemberDiscount(memberLevel, totalAmount);
+        // Use the higher discount (manual or auto)
+        memberDiscount = Math.max(autoDiscount, discount || 0);
+      }
+    }
+
+    const finalAmount = totalAmount - memberDiscount;
 
     const orderId = `ORD-${Date.now()}`;
 
@@ -147,7 +169,7 @@ router.post("/", authenticateToken, async (req, res, next) => {
     await pool.execute(
       `INSERT INTO orders (id, customer_id, staff_id, total_amount, discount, final_amount, status) 
        VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-      [orderId, customer_id || null, userId, totalAmount, discount, finalAmount]
+      [orderId, customer_id || null, userId, totalAmount, memberDiscount, finalAmount]
     );
 
     // Create order items
@@ -238,6 +260,61 @@ router.put("/:id/status", authenticateToken, async (req, res, next) => {
       status,
       req.params.id,
     ]);
+
+    // If order is completed and has a member customer, add points and check for upgrade
+    if (status === "completed" && order.customer_id) {
+      try {
+        // Get member info
+        const [memberRows]: any = await pool.execute(
+          "SELECT level, points FROM members WHERE id = ?",
+          [order.customer_id]
+        );
+
+        if (memberRows.length > 0) {
+          const member = memberRows[0];
+          const pointsToAdd = calculatePointsToAdd(
+            member.level,
+            parseFloat(order.final_amount)
+          );
+
+          if (pointsToAdd > 0) {
+            const newPoints = member.points + pointsToAdd;
+            
+            // Check if should upgrade
+            const newLevel = getUpgradeLevel(newPoints);
+            
+            // Update member points and level if upgraded
+            if (newLevel && newLevel !== member.level) {
+              await pool.execute(
+                "UPDATE members SET points = ?, level = ? WHERE id = ?",
+                [newPoints, newLevel, order.customer_id]
+              );
+              logger.info("Member upgraded", {
+                memberId: order.customer_id,
+                oldLevel: member.level,
+                newLevel,
+                points: newPoints,
+              });
+            } else {
+              await pool.execute(
+                "UPDATE members SET points = ? WHERE id = ?",
+                [newPoints, order.customer_id]
+              );
+            }
+
+            logger.info("Points added to member", {
+              memberId: order.customer_id,
+              pointsAdded: pointsToAdd,
+              totalPoints: newPoints,
+              orderId: order.id,
+            });
+          }
+        }
+      } catch (pointsError) {
+        console.error("Error updating member points:", pointsError);
+        // Don't fail the order update if points update fails
+      }
+    }
 
     // Create notification based on status
     try {

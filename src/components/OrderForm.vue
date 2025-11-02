@@ -5,20 +5,39 @@
       <label class="block text-sm font-medium text-gray-700 mb-2">
         Khách Hàng (Tùy chọn)
       </label>
-      <select
-        v-model="formData.customer_id"
-        class="input-field"
-        @change="selectedCustomer = members.find(m => m.id === formData.customer_id)"
-      >
+      <select v-model="formData.customer_id" class="input-field" @change="handleCustomerChange">
         <option value="">Khách vãng lai</option>
-        <option
-          v-for="member in members"
-          :key="member.id"
-          :value="member.id"
-        >
-          {{ member.name }} - {{ member.phone }}
+        <option v-for="member in members" :key="member.id" :value="member.id">
+          {{ member.name }} - {{ member.phone }} {{ member.level ? `(${getLevelLabel(member.level)})` : '' }}
         </option>
       </select>
+      <div v-if="selectedCustomer" class="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <p class="text-sm text-gray-700">
+          <span class="font-medium">Thành viên: </span>
+          <span class="text-blue-700 font-semibold">{{ getLevelLabel(selectedCustomer.level) }}</span>
+        </p>
+        <div class="grid grid-cols-2 gap-2 mt-2">
+          <div>
+            <p class="text-xs text-gray-600">Điểm hiện tại:</p>
+            <p class="text-sm font-semibold text-primary">{{ selectedCustomer.points || 0 }} điểm</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-600">Giảm giá:</p>
+            <p v-if="memberDiscount > 0" class="text-sm font-semibold text-green-700">
+              {{ getDiscountPercent(selectedCustomer.level) }}% ({{ formatCurrency(memberDiscount) }})
+            </p>
+            <p v-else class="text-sm text-gray-500">Không có</p>
+          </div>
+        </div>
+        <div v-if="memberDiscount > 0 && finalAmount > 0" class="mt-2 pt-2 border-t border-blue-200">
+          <p class="text-xs text-gray-600">Điểm tích lũy sẽ nhận:</p>
+          <p class="text-sm font-bold text-primary">{{ calculatePointsToReceive(selectedCustomer.level, finalAmount) }}
+            điểm</p>
+          <p class="text-xs text-gray-500 mt-1">
+            ({{ getPointsPer10k(selectedCustomer.level) }} điểm / 10,000đ)
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- Add Medicine to Order -->
@@ -27,50 +46,31 @@
       <div class="flex gap-2 mb-3">
         <select v-model="selectedMedicineId" class="flex-1 input-field">
           <option value="">Chọn thuốc</option>
-          <option
-            v-for="medicine in medicines"
-            :key="medicine.id"
-            :value="medicine.id"
-            :disabled="isMedicineDisabled(medicine)"
-          >
-            {{ medicine.name }}{{ getMedicineStatus(medicine) ? ` - ${getMedicineStatus(medicine)}` : ` - Còn ${medicine.quantity} - ${formatCurrency(medicine.price)}` }}
+          <option v-for="medicine in medicines" :key="medicine.id" :value="medicine.id"
+            :disabled="isMedicineDisabled(medicine)">
+            {{ medicine.name }}{{ getMedicineStatus(medicine) ? ` - ${getMedicineStatus(medicine)}` : ` - Còn
+            ${medicine.quantity} - ${formatCurrency(medicine.price)}` }}
           </option>
         </select>
-        <input
-          v-model.number="medicineQuantity"
-          type="number"
-          min="1"
-          placeholder="Số lượng"
-          class="w-24 input-field"
-        />
-        <button
-          type="button"
-          @click="addItem"
-          :disabled="!selectedMedicineId || !medicineQuantity || medicineQuantity <= 0"
-          class="btn-primary"
-        >
+        <input v-model.number="medicineQuantity" type="number" min="1" placeholder="Số lượng"
+          class="w-24 input-field" />
+        <button type="button" @click="addItem"
+          :disabled="!selectedMedicineId || !medicineQuantity || medicineQuantity <= 0" class="btn-primary">
           Thêm
         </button>
       </div>
 
       <!-- Order Items List -->
       <div v-if="formData.items.length > 0" class="space-y-2 mt-4">
-        <div
-          v-for="(item, index) in formData.items"
-          :key="index"
-          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-        >
+        <div v-for="(item, index) in formData.items" :key="index"
+          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
           <div class="flex-1">
             <p class="font-medium text-gray-800">{{ item.medicine?.name || 'Đang tải...' }}</p>
             <p class="text-sm text-gray-600">
               {{ item.quantity }} x {{ formatCurrency(item.price) }} = {{ formatCurrency(item.subtotal) }}
             </p>
           </div>
-          <button
-            type="button"
-            @click="removeItem(index)"
-            class="text-red-600 hover:text-red-700"
-          >
+          <button type="button" @click="removeItem(index)" class="text-red-600 hover:text-red-700">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -83,16 +83,15 @@
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-2">
         Giảm Giá (VNĐ)
+        <span v-if="memberDiscount > 0" class="text-sm text-green-600 font-normal">
+          (Tự động: {{ formatCurrency(memberDiscount) }})
+        </span>
       </label>
-      <input
-        v-model.number="formData.discount"
-        type="number"
-        min="0"
-        :max="totalAmount"
-        step="1000"
-        class="input-field"
-        placeholder="0"
-      />
+      <input v-model.number="formData.discount" type="number" min="0" :max="totalAmount" step="1000" class="input-field"
+        placeholder="0" :disabled="memberDiscount > 0" />
+      <p v-if="memberDiscount > 0" class="text-xs text-gray-500 mt-1">
+        Giảm giá tự động đã được áp dụng dựa vào cấp độ thành viên
+      </p>
     </div>
 
     <!-- Total -->
@@ -112,18 +111,11 @@
     </div>
 
     <div class="flex justify-end gap-3 pt-4">
-      <button
-        type="button"
-        @click="$emit('cancel')"
-        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-      >
+      <button type="button" @click="$emit('cancel')"
+        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
         Hủy
       </button>
-      <button
-        type="submit"
-        :disabled="loading || formData.items.length === 0"
-        class="btn-primary"
-      >
+      <button type="submit" :disabled="loading || formData.items.length === 0" class="btn-primary">
         {{ loading ? "Đang tạo..." : "Tạo Đơn Hàng" }}
       </button>
     </div>
@@ -149,6 +141,7 @@ const medicines = ref<Medicine[]>([]);
 const selectedCustomer = ref<Member | null>(null);
 const selectedMedicineId = ref("");
 const medicineQuantity = ref(1);
+const memberDiscount = ref(0);
 
 const formData = ref({
   customer_id: "",
@@ -193,8 +186,73 @@ const totalAmount = computed(() => {
 });
 
 const finalAmount = computed(() => {
-  return Math.max(0, totalAmount.value - (formData.value.discount || 0));
+  const discount = memberDiscount.value > 0 ? memberDiscount.value : (formData.value.discount || 0);
+  return Math.max(0, totalAmount.value - discount);
 });
+
+// Member level discount calculation
+function calculateMemberDiscount(level: string, total: number): number {
+  const discountConfig: Record<string, { percent: number; max: number }> = {
+    bronze: { percent: 2, max: 20000 },
+    silver: { percent: 5, max: 50000 },
+    gold: { percent: 8, max: 100000 },
+    platinum: { percent: 12, max: 200000 },
+  };
+
+  const config = discountConfig[level];
+  if (!config) return 0;
+
+  const discount = (total * config.percent) / 100;
+  return Math.min(discount, config.max);
+}
+
+function getLevelLabel(level: string): string {
+  const labels: Record<string, string> = {
+    bronze: "Đồng",
+    silver: "Bạc",
+    gold: "Vàng",
+    platinum: "Bạch Kim",
+  };
+  return labels[level] || level;
+}
+
+function getDiscountPercent(level: string): number {
+  const discountConfig: Record<string, { percent: number }> = {
+    bronze: { percent: 2 },
+    silver: { percent: 5 },
+    gold: { percent: 8 },
+    platinum: { percent: 12 },
+  };
+  return discountConfig[level]?.percent || 0;
+}
+
+function getPointsPer10k(level: string): number {
+  const pointsConfig: Record<string, number> = {
+    bronze: 5,
+    silver: 10,
+    gold: 15,
+    platinum: 20,
+  };
+  return pointsConfig[level] || 0;
+}
+
+function calculatePointsToReceive(level: string, finalAmount: number): number {
+  const pointsPer10k = getPointsPer10k(level);
+  return Math.floor((finalAmount / 10000) * pointsPer10k);
+}
+
+function handleCustomerChange() {
+  const customer = members.value.find(m => m.id === formData.value.customer_id);
+  selectedCustomer.value = customer || null;
+
+  if (customer && customer.level) {
+    memberDiscount.value = calculateMemberDiscount(customer.level, totalAmount.value);
+    formData.value.discount = memberDiscount.value;
+  } else {
+    memberDiscount.value = 0;
+    formData.value.discount = 0;
+  }
+}
 
 async function fetchMembers() {
   try {
@@ -247,6 +305,12 @@ async function addItem() {
     }
     item.quantity = newQuantity;
     item.subtotal = item.quantity * item.price;
+
+    // Recalculate member discount when items change
+    if (selectedCustomer.value && selectedCustomer.value.level) {
+      memberDiscount.value = calculateMemberDiscount(selectedCustomer.value.level, totalAmount.value);
+      formData.value.discount = memberDiscount.value;
+    }
   } else {
     // Add new item
     if (medicineQuantity.value > medicine.quantity) {
@@ -261,6 +325,12 @@ async function addItem() {
       price: medicine.price,
       subtotal: medicine.price * medicineQuantity.value,
     });
+
+    // Recalculate member discount when items change
+    if (selectedCustomer.value && selectedCustomer.value.level) {
+      memberDiscount.value = calculateMemberDiscount(selectedCustomer.value.level, totalAmount.value);
+      formData.value.discount = memberDiscount.value;
+    }
   }
 
   selectedMedicineId.value = "";
@@ -269,6 +339,12 @@ async function addItem() {
 
 function removeItem(index: number) {
   formData.value.items.splice(index, 1);
+
+  // Recalculate member discount when items change
+  if (selectedCustomer.value && selectedCustomer.value.level) {
+    memberDiscount.value = calculateMemberDiscount(selectedCustomer.value.level, totalAmount.value);
+    formData.value.discount = memberDiscount.value;
+  }
 }
 
 async function handleSubmit() {
@@ -316,4 +392,3 @@ onMounted(() => {
   fetchMedicines();
 });
 </script>
-
