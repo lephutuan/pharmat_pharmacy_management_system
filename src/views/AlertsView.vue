@@ -2,16 +2,14 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-title text-gray-800">Cảnh Báo</h1>
-      <div class="flex gap-3">
-        <button class="btn-outline" @click="filter = 'all'">Tất Cả</button>
-        <button class="btn-outline" @click="filter = 'expiry'">Hết Hạn</button>
-        <button class="btn-outline" @click="filter = 'stock'">Hết Hàng</button>
-      </div>
     </div>
 
     <!-- Alert Stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <div class="card bg-red-50 border-2 border-red-200">
+      <div :class="[
+        'card cursor-pointer transition-all hover:shadow-lg',
+        filter === 'high' ? 'bg-red-100 border-4 border-red-400 shadow-lg' : 'bg-red-50 border-2 border-red-200'
+      ]" @click="filter = 'high'">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-red-700 font-medium">Cảnh Báo Cao</p>
@@ -24,7 +22,10 @@
         </div>
       </div>
 
-      <div class="card bg-orange-50 border-2 border-orange-200">
+      <div :class="[
+        'card cursor-pointer transition-all hover:shadow-lg',
+        filter === 'medium' ? 'bg-orange-100 border-4 border-orange-400 shadow-lg' : 'bg-orange-50 border-2 border-orange-200'
+      ]" @click="filter = 'medium'">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-orange-700 font-medium">Cảnh Báo Trung Bình</p>
@@ -37,7 +38,10 @@
         </div>
       </div>
 
-      <div class="card bg-yellow-50 border-2 border-yellow-200">
+      <div :class="[
+        'card cursor-pointer transition-all hover:shadow-lg',
+        filter === 'low' ? 'bg-yellow-100 border-4 border-yellow-400 shadow-lg' : 'bg-yellow-50 border-2 border-yellow-200'
+      ]" @click="filter = 'low'">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-yellow-700 font-medium">Cảnh Báo Thấp</p>
@@ -49,7 +53,10 @@
         </div>
       </div>
 
-      <div class="card bg-green-50 border-2 border-green-200">
+      <div :class="[
+        'card cursor-pointer transition-all hover:shadow-lg',
+        filter === 'resolved' ? 'bg-green-100 border-4 border-green-400 shadow-lg' : 'bg-green-50 border-2 border-green-200'
+      ]" @click="filter = 'resolved'">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-green-700 font-medium">Đã Xử Lý</p>
@@ -88,7 +95,7 @@
       <div v-else class="space-y-3">
         <div v-for="alert in filteredAlerts" :key="alert.id" :class="[
           'p-4 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all',
-          getAlertBg(alert.severity)
+          getAlertBg(alert)
         ]" @click="markAsRead(alert.id)">
           <div class="flex items-start justify-between">
             <div class="flex-1">
@@ -126,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { BellAlertIcon, ExclamationTriangleIcon, CubeIcon, CogIcon } from '@heroicons/vue/24/outline'
 import type { Alert } from '@/types'
 import api from '@/services/api'
@@ -134,14 +141,16 @@ import { useToast } from '@/composables/useToast'
 
 const { success, error } = useToast()
 
-const filter = ref('all')
+const filter = ref<'all' | 'high' | 'medium' | 'low' | 'resolved'>('all')
 const alerts = ref<Alert[]>([])
 const loading = ref(false)
 
 const filteredAlerts = computed(() => {
   if (filter.value === 'all') return alerts.value
-  if (filter.value === 'expiry') return alerts.value.filter(a => a.type === 'expiry')
-  if (filter.value === 'stock') return alerts.value.filter(a => a.type === 'low_stock')
+  if (filter.value === 'high') return alerts.value.filter(a => a.severity === 'high' && !a.read)
+  if (filter.value === 'medium') return alerts.value.filter(a => a.severity === 'medium' && !a.read)
+  if (filter.value === 'low') return alerts.value.filter(a => a.severity === 'low' && !a.read)
+  if (filter.value === 'resolved') return alerts.value.filter(a => a.read)
   return alerts.value
 })
 
@@ -154,11 +163,6 @@ async function fetchAlerts() {
   loading.value = true
   try {
     const params: any = { page: 1, limit: 100 }
-    if (filter.value !== 'all') {
-      if (filter.value === 'expiry') params.type = 'expiry'
-      if (filter.value === 'stock') params.type = 'low_stock'
-    }
-
     const response = await api.get('/alerts', { params })
     alerts.value = response.data.data.map((item: any) => ({
       id: item.id,
@@ -177,17 +181,14 @@ async function fetchAlerts() {
   }
 }
 
-// Watch filter to refetch
-watch(filter, () => {
-  fetchAlerts()
-})
-
 async function markAsRead(alertId: string) {
   try {
     await api.put(`/alerts/${alertId}/read`)
     const alert = alerts.value.find(a => a.id === alertId)
     if (alert) alert.read = true
     success('Đã đánh dấu đã đọc')
+    // Refresh data after marking as read
+    await fetchAlerts()
   } catch (err: any) {
     error(err.response?.data?.error || 'Lỗi khi cập nhật cảnh báo')
   }
@@ -209,17 +210,18 @@ onMounted(() => {
   fetchAlerts()
 })
 
-function markAllAsRead() {
+async function markAllAsRead() {
   const unread = alerts.value.filter(a => !a.read)
-  Promise.all(unread.map(a => api.put(`/alerts/${a.id}/read`)))
-    .then(() => {
-      alerts.value.forEach(a => { a.read = true })
-      success('Đã đánh dấu tất cả là đã đọc')
-    })
-    .catch((err) => {
-      error('Lỗi khi cập nhật cảnh báo')
-      console.error(err)
-    })
+  try {
+    await Promise.all(unread.map(a => api.put(`/alerts/${a.id}/read`)))
+    alerts.value.forEach(a => { a.read = true })
+    success('Đã đánh dấu tất cả là đã đọc')
+    // Refresh data after marking all as read
+    await fetchAlerts()
+  } catch (err) {
+    error('Lỗi khi cập nhật cảnh báo')
+    console.error(err)
+  }
 }
 
 function getAlertIcon(type: string) {
@@ -235,8 +237,13 @@ function getAlertIcon(type: string) {
   }
 }
 
-function getAlertBg(severity: string): string {
-  switch (severity) {
+function getAlertBg(alert: Alert): string {
+  // Nếu đã xử lý thì dùng màu xanh
+  if (alert.read) {
+    return 'bg-green-50 border-green-400'
+  }
+  // Nếu chưa xử lý thì dùng màu theo severity
+  switch (alert.severity) {
     case 'high':
       return 'bg-red-50 border-red-400'
     case 'medium':
