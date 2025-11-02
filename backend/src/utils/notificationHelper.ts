@@ -67,3 +67,54 @@ export async function notifyOrderCancelled(
 
   await createNotification(userId, title, message);
 }
+
+/**
+ * Create notification for inventory operations (import/export)
+ * Notifies all admin and inventory_staff users
+ */
+export async function notifyInventoryOperation(
+  type: 'import' | 'export',
+  medicineName: string,
+  quantity: number,
+  performedBy: string,
+  performedByName?: string,
+  notes?: string | null
+): Promise<void> {
+  try {
+    // Get all admin and inventory_staff users
+    const [users]: any = await pool.execute(
+      "SELECT id FROM users WHERE (role = 'admin' OR role = 'inventory_staff') AND active = TRUE"
+    );
+
+    if (!users || users.length === 0) {
+      logger.warn("No admin or inventory_staff users found to notify");
+      return;
+    }
+
+    const operationLabel = type === 'import' ? 'Nhập kho' : 'Xuất kho';
+    const title = `${operationLabel}: ${medicineName}`;
+    
+    let message = `${performedByName || 'Người dùng'} đã thực hiện ${operationLabel.toLowerCase()} `;
+    message += `${quantity} ${medicineName}`;
+    if (notes) {
+      message += ` - Ghi chú: ${notes}`;
+    }
+
+    // Create notification for each user
+    const notificationPromises = users.map((user: { id: string }) =>
+      createNotification(user.id, title, message)
+    );
+
+    await Promise.all(notificationPromises);
+    
+    logger.info("Inventory operation notifications sent", {
+      type,
+      medicineName,
+      quantity,
+      notifiedUsers: users.length
+    });
+  } catch (error) {
+    console.error("Error sending inventory operation notifications:", error);
+    // Don't throw error - notifications are non-critical
+  }
+}

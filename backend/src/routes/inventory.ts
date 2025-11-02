@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../config/database";
+import { notifyInventoryOperation } from "../utils/notificationHelper";
 
 const router = express.Router();
 
@@ -92,7 +93,24 @@ router.post("/", async (req, res) => {
       [id]
     );
 
-    res.status(201).json(rows[0]);
+    const inventoryRecord = rows[0];
+
+    // Send notification to all admin and inventory_staff users
+    if (inventoryRecord) {
+      notifyInventoryOperation(
+        type as 'import' | 'export',
+        inventoryRecord.medicine_name,
+        quantity,
+        user_id,
+        inventoryRecord.user_name,
+        notes || null
+      ).catch((error) => {
+        // Log error but don't fail the request
+        console.error("Failed to send inventory notification:", error);
+      });
+    }
+
+    res.status(201).json(inventoryRecord);
   } catch (error) {
     console.error("Error creating inventory record:", error);
     res.status(500).json({ error: "Failed to create inventory record" });
