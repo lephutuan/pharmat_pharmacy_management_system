@@ -28,12 +28,12 @@
         <select v-model="selectedMedicineId" class="flex-1 input-field">
           <option value="">Chọn thuốc</option>
           <option
-            v-for="medicine in availableMedicines"
+            v-for="medicine in medicines"
             :key="medicine.id"
             :value="medicine.id"
-            :disabled="medicine.quantity === 0"
+            :disabled="isMedicineDisabled(medicine)"
           >
-            {{ medicine.name }} - Còn {{ medicine.quantity }} - {{ formatCurrency(medicine.price) }}
+            {{ medicine.name }}{{ getMedicineStatus(medicine) ? ` - ${getMedicineStatus(medicine)}` : ` - Còn ${medicine.quantity} - ${formatCurrency(medicine.price)}` }}
           </option>
         </select>
         <input
@@ -157,9 +157,36 @@ const formData = ref({
   discount: 0,
 });
 
-const availableMedicines = computed(() => {
-  return medicines.value.filter(m => m.quantity > 0);
-});
+// Check if medicine is expired
+function isExpired(medicine: Medicine): boolean {
+  if (!medicine.expiryDate) return false;
+  const expiryDate = new Date(medicine.expiryDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return expiryDate < today;
+}
+
+// Check if medicine is out of stock
+function isOutOfStock(medicine: Medicine): boolean {
+  return medicine.quantity === 0;
+}
+
+// Check if medicine can be selected (not expired and not out of stock)
+function isMedicineDisabled(medicine: Medicine): boolean {
+  return isExpired(medicine) || isOutOfStock(medicine);
+}
+
+// Get medicine status text
+function getMedicineStatus(medicine: Medicine): string | null {
+  if (isExpired(medicine) && medicine.quantity > 0) {
+    return 'Hết hạn';
+  }
+  if (isOutOfStock(medicine)) {
+    return 'Hết hàng';
+  }
+  return null;
+}
+
 
 const totalAmount = computed(() => {
   return formData.value.items.reduce((sum, item) => sum + item.subtotal, 0);

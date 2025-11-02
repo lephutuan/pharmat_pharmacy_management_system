@@ -30,7 +30,7 @@ END//
 -- Trigger: Auto-generate Alerts for Expiring Medicines and Low Stock
 -- Fixed: Prevent duplicate alerts by checking existing alerts
 -- Severity levels:
---   HIGH: Đã hết hạn, Đã hết hàng
+--   HIGH: Hết hạn, Hết hàng
 --   MEDIUM: Sắp hết hạn (within 30 days)
 --   LOW: Sắp hết hàng (quantity <= stock_alert)
 CREATE TRIGGER IF NOT EXISTS tr_check_expiry_alert
@@ -53,7 +53,7 @@ BEGIN
     FROM alerts
     WHERE type = 'expiry'
       AND message LIKE CONCAT('%', NEW.name, '%')
-      AND message LIKE '%đã hết hạn%'
+      AND message LIKE '%hết hạn%'
       AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
       AND is_read = FALSE
     LIMIT 1;
@@ -63,8 +63,8 @@ BEGIN
       VALUES (
         CONCAT('ALRT-', UNIX_TIMESTAMP(NOW()), '-', SUBSTRING(MD5(RAND()), 1, 8)),
         'expiry',
-        CONCAT('Thuốc đã hết hạn: ', NEW.name),
-        CONCAT(NEW.name, ' đã hết hạn vào ', DATE_FORMAT(NEW.expiry_date, '%d/%m/%Y')),
+        CONCAT('Thuốc hết hạn: ', NEW.name),
+        CONCAT(NEW.name, ' hết hạn vào ', DATE_FORMAT(NEW.expiry_date, '%d/%m/%Y')),
         'high'
       );
     END IF;

@@ -29,7 +29,7 @@
         </select>
         <select v-model="stockFilter" class="input-field">
           <option value="">Tất cả trạng thái</option>
-          <option value="expired">Đã hết hạn</option>
+          <option value="expired">Hết hạn</option>
           <option value="low">Hết hàng</option>
           <option value="expiring">Sắp hết hạn</option>
           <option value="low_stock">Sắp hết hàng</option>
@@ -382,7 +382,7 @@ function getStockClass(quantity: number, stockAlert?: number): string {
 function getStatusBadge(medicine: Medicine): string {
   const daysUntilExpiry = Math.floor((new Date(medicine.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
-  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Sắp hết hàng > Còn hàng
+  // Ưu tiên: Hết hạn > Hết hàng > Sắp hết hạn > Sắp hết hàng > Còn hàng
   if (daysUntilExpiry < 0 && medicine.quantity > 0) return 'px-3 py-1 bg-red-500 text-white rounded-full text-xs'
   if (medicine.quantity === 0) return 'px-3 py-1 bg-red-500 text-white rounded-full text-xs'
   if (daysUntilExpiry >= 0 && daysUntilExpiry <= 30 && medicine.quantity > 0) return 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs'
@@ -393,8 +393,8 @@ function getStatusBadge(medicine: Medicine): string {
 function getStatusText(medicine: Medicine): string {
   const daysUntilExpiry = Math.floor((new Date(medicine.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
-  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Sắp hết hàng > Còn hàng
-  if (daysUntilExpiry < 0 && medicine.quantity > 0) return 'Đã hết hạn'
+  // Ưu tiên: Hết hạn > Hết hàng > Sắp hết hạn > Sắp hết hàng > Còn hàng
+  if (daysUntilExpiry < 0 && medicine.quantity > 0) return 'Hết hạn'
   if (medicine.quantity === 0) return 'Hết hàng'
   if (daysUntilExpiry >= 0 && daysUntilExpiry <= 30 && medicine.quantity > 0) return 'Sắp hết hạn'
   if (medicine.quantity > 0 && medicine.quantity <= medicine.stockAlert) return 'Sắp hết hàng'
