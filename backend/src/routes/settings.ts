@@ -1,5 +1,7 @@
 import express from "express";
 import pool from "../config/database";
+import { authenticateToken, requireRole } from "../middleware/auth";
+import { notifySettingsUpdated } from "../utils/notificationHelper";
 
 const router = express.Router();
 
@@ -47,7 +49,7 @@ router.get("/:key", async (req, res) => {
 });
 
 // Update setting
-router.put("/:key", async (req, res) => {
+router.put("/:key", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const { value, description } = req.body;
 
@@ -65,6 +67,26 @@ router.put("/:key", async (req, res) => {
       return res.status(404).json({ error: "Setting not found" });
     }
 
+    // Get performer name for notification
+    const userId = (req as any).user?.id;
+    let performerName: string | undefined;
+    if (userId) {
+      const [performerRows]: any = await pool.execute("SELECT name FROM users WHERE id = ?", [userId]);
+      performerName = performerRows[0]?.name;
+    }
+
+    // Send notification to all admins
+    if (userId) {
+      notifySettingsUpdated(
+        req.params.key,
+        value,
+        userId,
+        performerName
+      ).catch((error) => {
+        console.error("Failed to send settings update notification:", error);
+      });
+    }
+
     res.json({
       key: rows[0].key,
       value: rows[0].value,
@@ -77,15 +99,36 @@ router.put("/:key", async (req, res) => {
 });
 
 // Update multiple settings
-router.put("/", async (req, res) => {
+router.put("/", authenticateToken, requireRole("admin"), async (req, res) => {
   try {
     const settings = req.body; // { key1: value1, key2: value2 }
 
+    // Get performer name for notification
+    const userId = (req as any).user?.id;
+    let performerName: string | undefined;
+    if (userId) {
+      const [performerRows]: any = await pool.execute("SELECT name FROM users WHERE id = ?", [userId]);
+      performerName = performerRows[0]?.name;
+    }
+
+    // Update settings and send notifications
     for (const [key, value] of Object.entries(settings)) {
       await pool.execute(
         "UPDATE settings SET value = ? WHERE `key` = ?",
         [value, key]
       );
+
+      // Send notification for each updated setting
+      if (userId && typeof value === 'string') {
+        notifySettingsUpdated(
+          key,
+          value,
+          userId,
+          performerName
+        ).catch((error) => {
+          console.error(`Failed to send settings update notification for ${key}:`, error);
+        });
+      }
     }
 
     // Return updated settings

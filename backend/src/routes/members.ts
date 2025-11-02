@@ -1,5 +1,7 @@
 import express from "express";
 import pool from "../config/database";
+import { authenticateToken } from "../middleware/auth";
+import { notifyMemberOperation } from "../utils/notificationHelper";
 
 const router = express.Router();
 
@@ -72,7 +74,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Create member
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req, res) => {
   try {
     const { name, email, phone, level = "bronze", points = 0 } = req.body;
     const id = `C${Date.now()}`;
@@ -83,6 +85,28 @@ router.post("/", async (req, res) => {
     );
 
     const [rows]: any = await pool.execute("SELECT * FROM members WHERE id = ?", [id]);
+    
+    // Get performer name for notification
+    const userId = (req as any).user?.id;
+    let performerName: string | undefined;
+    if (userId) {
+      const [performerRows]: any = await pool.execute("SELECT name FROM users WHERE id = ?", [userId]);
+      performerName = performerRows[0]?.name;
+    }
+
+    // Send notification to all admins
+    if (userId) {
+      notifyMemberOperation(
+        'created',
+        name,
+        phone,
+        userId,
+        performerName
+      ).catch((error) => {
+        console.error("Failed to send member creation notification:", error);
+      });
+    }
+
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error("Error creating member:", error);
@@ -91,9 +115,15 @@ router.post("/", async (req, res) => {
 });
 
 // Update member
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, async (req, res) => {
   try {
     const { name, email, phone, level, points } = req.body;
+
+    // Get current member info for notification
+    const [currentMember]: any = await pool.execute("SELECT name, phone FROM members WHERE id = ?", [req.params.id]);
+    if (currentMember.length === 0) {
+      return res.status(404).json({ error: "Member not found" });
+    }
 
     await pool.execute(
       "UPDATE members SET name = ?, email = ?, phone = ?, level = ?, points = ? WHERE id = ?",
@@ -103,9 +133,28 @@ router.put("/:id", async (req, res) => {
     const [rows]: any = await pool.execute("SELECT * FROM members WHERE id = ?", [
       req.params.id,
     ]);
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Member not found" });
+
+    // Get performer name for notification
+    const userId = (req as any).user?.id;
+    let performerName: string | undefined;
+    if (userId) {
+      const [performerRows]: any = await pool.execute("SELECT name FROM users WHERE id = ?", [userId]);
+      performerName = performerRows[0]?.name;
     }
+
+    // Send notification to all admins
+    if (userId) {
+      notifyMemberOperation(
+        'updated',
+        name || currentMember[0].name,
+        phone || currentMember[0].phone,
+        userId,
+        performerName
+      ).catch((error) => {
+        console.error("Failed to send member update notification:", error);
+      });
+    }
+
     res.json(rows[0]);
   } catch (error) {
     console.error("Error updating member:", error);

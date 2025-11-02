@@ -69,7 +69,7 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching alerts:", error);
-    res.status(500).json({ error: "Failed to fetch alerts" });
+    res.status(500).json({ error: "Failed to fetch alerts", details: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -132,7 +132,7 @@ router.get("/unread/count", async (req, res) => {
     res.json({ count: rows[0].count });
   } catch (error) {
     console.error("Error fetching unread count:", error);
-    res.status(500).json({ error: "Failed to fetch unread count" });
+    res.status(500).json({ error: "Failed to fetch unread count", details: error instanceof Error ? error.message : String(error) });
   }
 });
 

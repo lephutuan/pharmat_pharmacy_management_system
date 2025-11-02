@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { NotFoundError, AppError } from "../utils/errors";
 import { handleDatabaseError } from "../utils/dbErrorHandler";
 import { logger } from "../utils/logger";
+import { notifyStaffOperation } from "../utils/notificationHelper";
 
 const router = express.Router();
 
@@ -132,6 +133,21 @@ router.post("/", authenticateToken, requireRole("admin"), async (req, res, next)
     logger.request("POST", "/staff", (req as any).user?.id, duration);
     logger.info("Staff created", { staffId: id, name, email, role, userId: (req as any).user?.id });
 
+    // Get performer name for notification
+    const [performerRows]: any = await pool.execute("SELECT name FROM users WHERE id = ?", [(req as any).user?.id]);
+    const performerName = performerRows[0]?.name;
+
+    // Send notification to all admins
+    notifyStaffOperation(
+      'created',
+      name,
+      email,
+      (req as any).user?.id,
+      performerName
+    ).catch((error) => {
+      console.error("Failed to send staff creation notification:", error);
+    });
+
     res.status(201).json(rows[0]);
   } catch (error) {
     if (error instanceof AppError) {
@@ -216,6 +232,22 @@ router.put("/:id", authenticateToken, requireRole("admin"), async (req, res, nex
     logger.request("PUT", `/staff/${req.params.id}`, (req as any).user?.id, duration);
     logger.info("Staff updated", { staffId: req.params.id, userId: (req as any).user?.id });
 
+    // Get performer name and staff info for notification
+    const [performerRows]: any = await pool.execute("SELECT name FROM users WHERE id = ?", [(req as any).user?.id]);
+    const performerName = performerRows[0]?.name;
+    const staffInfo = rows[0];
+
+    // Send notification to all admins
+    notifyStaffOperation(
+      'updated',
+      staffInfo.name,
+      staffInfo.email,
+      (req as any).user?.id,
+      performerName
+    ).catch((error) => {
+      console.error("Failed to send staff update notification:", error);
+    });
+
     res.json(rows[0]);
   } catch (error) {
     if (error instanceof AppError) {
@@ -228,33 +260,66 @@ router.put("/:id", authenticateToken, requireRole("admin"), async (req, res, nex
 // Delete staff (protected, admin only)
 router.delete("/:id", authenticateToken, requireRole("admin"), async (req, res, next) => {
   try {
+    // Get performer name FIRST (before any deletion)
+    const [performerRows]: any = await pool.execute("SELECT name FROM users WHERE id = ?", [(req as any).user?.id]);
+    const performerName = performerRows[0]?.name;
+
     // Check if staff exists
-    const [existing]: any = await pool.execute("SELECT id FROM users WHERE id = ?", [req.params.id]);
+    const [existing]: any = await pool.execute("SELECT id, name, email FROM users WHERE id = ?", [req.params.id]);
     if (existing.length === 0) {
       throw new NotFoundError("Staff", req.params.id);
     }
+
+    const staffInfo = existing[0];
 
     // Check if staff has related records (orders, inventory_records)
     const [orderCheck]: any = await pool.execute("SELECT COUNT(*) as count FROM orders WHERE staff_id = ?", [
       req.params.id,
     ]);
-    if (orderCheck[0].count > 0) {
+    
+    const [inventoryCheck]: any = await pool.execute("SELECT COUNT(*) as count FROM inventory_records WHERE user_id = ?", [
+      req.params.id,
+    ]);
+    
+    const hasRelatedRecords = orderCheck[0].count > 0 || inventoryCheck[0].count > 0;
+    
+    let wasDeleted = false;
+    if (hasRelatedRecords) {
       // Instead of deleting, deactivate
       await pool.execute("UPDATE users SET active = 0 WHERE id = ?", [req.params.id]);
-      logger.info("Staff deactivated (has related records)", { staffId: req.params.id });
-      return res.json({ message: "Staff deactivated (cannot delete staff with related records)" });
+      logger.info("Staff deactivated (has related records)", { 
+        staffId: req.params.id,
+        orderCount: orderCheck[0].count,
+        inventoryCount: inventoryCheck[0].count
+      });
+    } else {
+      await pool.execute("DELETE FROM users WHERE id = ?", [req.params.id]);
+      wasDeleted = true;
+      logger.info("Staff deleted", { staffId: req.params.id, userId: (req as any).user?.id });
     }
 
-    await pool.execute("DELETE FROM users WHERE id = ?", [req.params.id]);
+    // Send notification to all admins
+    notifyStaffOperation(
+      'deleted',
+      staffInfo.name,
+      staffInfo.email,
+      (req as any).user?.id,
+      performerName
+    ).catch((error) => {
+      console.error("Failed to send staff deletion notification:", error);
+    });
 
-    logger.info("Staff deleted", { staffId: req.params.id, userId: (req as any).user?.id });
-
-    res.json({ message: "Staff deleted successfully" });
+    res.json({ 
+      message: wasDeleted 
+        ? "Staff deleted successfully" 
+        : "Staff deactivated (cannot delete staff with related records)" 
+    });
   } catch (error) {
     if (error instanceof AppError) {
       return next(error);
     }
-    handleDatabaseError(error);
+    // Pass error to next middleware instead of calling handleDatabaseError which throws
+    return next(error);
   }
 });
 

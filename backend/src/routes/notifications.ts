@@ -89,7 +89,7 @@ router.get("/", authenticateToken, async (req, res, next) => {
     if (error instanceof AppError) {
       return next(error);
     }
-    handleDatabaseError(error);
+    return next(error);
   }
 });
 
@@ -119,7 +119,7 @@ router.get("/unread/count", authenticateToken, async (req, res, next) => {
     if (error instanceof AppError) {
       return next(error);
     }
-    handleDatabaseError(error);
+    return next(error);
   }
 });
 
@@ -157,7 +157,7 @@ router.put("/:id/read", authenticateToken, async (req, res, next) => {
     if (error instanceof AppError) {
       return next(error);
     }
-    handleDatabaseError(error);
+    return next(error);
   }
 });
 
@@ -182,7 +182,7 @@ router.put("/read-all", authenticateToken, async (req, res, next) => {
     if (error instanceof AppError) {
       return next(error);
     }
-    handleDatabaseError(error);
+    return next(error);
   }
 });
 
@@ -211,7 +211,7 @@ router.post("/", authenticateToken, async (req, res, next) => {
     if (error instanceof AppError) {
       return next(error);
     }
-    handleDatabaseError(error);
+    return next(error);
   }
 });
 
@@ -241,7 +241,7 @@ router.delete("/:id", authenticateToken, async (req, res, next) => {
     if (error instanceof AppError) {
       return next(error);
     }
-    handleDatabaseError(error);
+    return next(error);
   }
 });
 

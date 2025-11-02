@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2">
+    <div class="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2">
       <TransitionGroup name="toast" tag="div">
         <div v-for="toast in toasts" :key="toast.id" :class="[
           'min-w-[300px] max-w-md px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in',
@@ -66,22 +66,22 @@ function getIcon(type: string) {
 
 .toast-enter-from {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateY(100%);
 }
 
 .toast-leave-to {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateY(100%);
 }
 
 @keyframes slide-in {
   from {
-    transform: translateX(100%);
+    transform: translateY(100%);
     opacity: 0;
   }
 
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }

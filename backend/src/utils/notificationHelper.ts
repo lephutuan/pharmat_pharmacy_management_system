@@ -118,3 +118,153 @@ export async function notifyInventoryOperation(
     // Don't throw error - notifications are non-critical
   }
 }
+
+/**
+ * Create notification for staff operations (create, update, delete)
+ * Notifies all admin users
+ */
+export async function notifyStaffOperation(
+  operation: 'created' | 'updated' | 'deleted',
+  staffName: string,
+  staffEmail: string,
+  performedBy: string,
+  performedByName?: string
+): Promise<void> {
+  try {
+    // Get all admin users
+    const [users]: any = await pool.execute(
+      "SELECT id FROM users WHERE role = 'admin' AND active = TRUE"
+    );
+
+    if (!users || users.length === 0) {
+      logger.warn("No admin users found to notify");
+      return;
+    }
+
+    const operationLabels: Record<string, string> = {
+      'created': 'Thêm nhân viên',
+      'updated': 'Cập nhật nhân viên',
+      'deleted': 'Xóa nhân viên'
+    };
+
+    const title = `${operationLabels[operation]}: ${staffName}`;
+    let message = `${performedByName || 'Người dùng'} đã ${operation === 'created' ? 'thêm' : operation === 'updated' ? 'cập nhật' : 'xóa'} nhân viên ${staffName}`;
+    if (operation !== 'deleted') {
+      message += ` (${staffEmail})`;
+    }
+
+    // Create notification for each admin user
+    const notificationPromises = users.map((user: { id: string }) =>
+      createNotification(user.id, title, message)
+    );
+
+    await Promise.all(notificationPromises);
+    
+    logger.info("Staff operation notifications sent", {
+      operation,
+      staffName,
+      notifiedUsers: users.length
+    });
+  } catch (error) {
+    console.error("Error sending staff operation notifications:", error);
+    // Don't throw error - notifications are non-critical
+  }
+}
+
+/**
+ * Create notification for member operations (create, update)
+ * Notifies all admin users
+ */
+export async function notifyMemberOperation(
+  operation: 'created' | 'updated',
+  memberName: string,
+  memberPhone: string,
+  performedBy: string,
+  performedByName?: string
+): Promise<void> {
+  try {
+    // Get all admin users
+    const [users]: any = await pool.execute(
+      "SELECT id FROM users WHERE role = 'admin' AND active = TRUE"
+    );
+
+    if (!users || users.length === 0) {
+      logger.warn("No admin users found to notify");
+      return;
+    }
+
+    const operationLabels: Record<string, string> = {
+      'created': 'Thêm thành viên',
+      'updated': 'Cập nhật thành viên'
+    };
+
+    const title = `${operationLabels[operation]}: ${memberName}`;
+    const message = `${performedByName || 'Người dùng'} đã ${operation === 'created' ? 'thêm' : 'cập nhật'} thành viên ${memberName} (${memberPhone})`;
+
+    // Create notification for each admin user
+    const notificationPromises = users.map((user: { id: string }) =>
+      createNotification(user.id, title, message)
+    );
+
+    await Promise.all(notificationPromises);
+    
+    logger.info("Member operation notifications sent", {
+      operation,
+      memberName,
+      notifiedUsers: users.length
+    });
+  } catch (error) {
+    console.error("Error sending member operation notifications:", error);
+    // Don't throw error - notifications are non-critical
+  }
+}
+
+/**
+ * Create notification for settings update
+ * Notifies all admin users
+ */
+export async function notifySettingsUpdated(
+  settingKey: string,
+  settingValue: string,
+  performedBy: string,
+  performedByName?: string
+): Promise<void> {
+  try {
+    // Get all admin users
+    const [users]: any = await pool.execute(
+      "SELECT id FROM users WHERE role = 'admin' AND active = TRUE"
+    );
+
+    if (!users || users.length === 0) {
+      logger.warn("No admin users found to notify");
+      return;
+    }
+
+    // Map setting keys to Vietnamese labels
+    const settingLabels: Record<string, string> = {
+      'pharmacy_name': 'Tên nhà thuốc',
+      'pharmacy_address': 'Địa chỉ nhà thuốc',
+      'pharmacy_phone': 'Số điện thoại',
+      'pharmacy_email': 'Email nhà thuốc'
+    };
+
+    const settingLabel = settingLabels[settingKey] || settingKey;
+    const title = `Cập nhật cài đặt: ${settingLabel}`;
+    const message = `${performedByName || 'Người dùng'} đã cập nhật ${settingLabel.toLowerCase()} thành "${settingValue}"`;
+
+    // Create notification for each admin user
+    const notificationPromises = users.map((user: { id: string }) =>
+      createNotification(user.id, title, message)
+    );
+
+    await Promise.all(notificationPromises);
+    
+    logger.info("Settings update notifications sent", {
+      settingKey,
+      notifiedUsers: users.length
+    });
+  } catch (error) {
+    console.error("Error sending settings update notifications:", error);
+    // Don't throw error - notifications are non-critical
+  }
+}
