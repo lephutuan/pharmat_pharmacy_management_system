@@ -58,52 +58,30 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Nhập Xuất Gần Đây</h3>
-        <div class="space-y-3">
-          <div
-            v-for="record in recentRecords"
-            :key="record.id"
-            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', record.type === 'import' ? 'bg-green-100' : 'bg-red-100']">
-                <svg class="w-5 h-5" :class="record.type === 'import' ? 'text-green-600' : 'text-red-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="record.type === 'import' ? 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' : 'M9 19l3 3m0 0l3-3m-3 3V10'" />
-                </svg>
-              </div>
-              <div>
-                <p class="font-medium text-gray-800">{{ record.medicine }}</p>
-                <p class="text-xs text-gray-500">{{ formatDateTime(record.date) }}</p>
-              </div>
+    <div class="card">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Nhập Xuất Gần Đây</h3>
+      <div class="space-y-3">
+        <div
+          v-for="record in recentRecords"
+          :key="record.id"
+          class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+        >
+          <div class="flex items-center gap-3">
+            <div :class="['w-10 h-10 rounded-lg flex items-center justify-center', record.type === 'import' ? 'bg-green-100' : 'bg-red-100']">
+              <svg class="w-5 h-5" :class="record.type === 'import' ? 'text-green-600' : 'text-red-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="record.type === 'import' ? 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' : 'M9 19l3 3m0 0l3-3m-3 3V10'" />
+              </svg>
             </div>
-            <div class="text-right">
-              <p :class="['font-semibold', record.type === 'import' ? 'text-green-600' : 'text-red-600']">
-                {{ record.type === 'import' ? '+' : '-' }}{{ record.quantity }}
-              </p>
-              <p class="text-xs text-gray-500">{{ formatCurrency(record.total) }}</p>
+            <div>
+              <p class="font-medium text-gray-800">{{ record.medicine }}</p>
+              <p class="text-xs text-gray-500">{{ formatDateTime(record.date) }}</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Sản Phẩm Sắp Hết Hạn</h3>
-        <div class="space-y-3">
-          <div
-            v-for="item in expiringItems"
-            :key="item.id"
-            class="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg"
-          >
-            <div>
-              <p class="font-medium text-gray-800">{{ item.name }}</p>
-              <p class="text-sm text-gray-600">Số lượng: {{ item.quantity }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-sm font-semibold text-orange-600">Còn {{ item.daysLeft }} ngày</p>
-              <p class="text-xs text-gray-500">{{ formatDate(item.expiryDate) }}</p>
-            </div>
+          <div class="text-right">
+            <p :class="['font-semibold', record.type === 'import' ? 'text-green-600' : 'text-red-600']">
+              {{ record.type === 'import' ? '+' : '-' }}{{ record.quantity }}
+            </p>
+            <p class="text-xs text-gray-500">{{ formatCurrency(record.total) }}</p>
           </div>
         </div>
       </div>
@@ -133,7 +111,6 @@ const showInventoryModal = ref(false)
 const inventoryType = ref<'import' | 'export'>('import')
 
 const recentRecords = ref<any[]>([])
-const expiringItems = ref<any[]>([])
 const medicines = ref<any[]>([])
 const loading = ref(false)
 
@@ -170,27 +147,6 @@ async function fetchInventoryData() {
     // Fetch medicines for stats
     const medicinesResponse = await api.get('/medicines', { params: { page: 1, limit: 100 } })
     medicines.value = medicinesResponse.data.data
-
-    // Calculate expiring items
-    const today = new Date()
-    expiringItems.value = medicines.value
-      .filter((m: any) => {
-        const expiryDate = new Date(m.expiry_date)
-        const daysUntilExpiry = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        return daysUntilExpiry <= 30 && daysUntilExpiry > 0 && m.quantity > 0
-      })
-      .map((m: any) => {
-        const expiryDate = new Date(m.expiry_date)
-        const daysUntilExpiry = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        return {
-          id: m.id,
-          name: m.name,
-          quantity: m.quantity,
-          expiryDate: m.expiry_date,
-          daysLeft: daysUntilExpiry
-        }
-      })
-      .slice(0, 5) // Show top 5
   } catch (error) {
     console.error('Error fetching inventory data:', error)
   } finally {
@@ -218,10 +174,6 @@ function formatCurrency(value: number): string {
 
 function formatDateTime(date: Date): string {
   return date.toLocaleString('vi-VN')
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('vi-VN')
 }
 </script>
 

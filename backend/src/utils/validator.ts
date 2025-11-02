@@ -61,9 +61,11 @@ export function validateMedicine(data: any): {
     errors.name = ['Name must be less than 255 characters'];
   }
 
-  // Category ID validation
-  if (!data.category_id || typeof data.category_id !== 'string') {
+  // Category ID validation (accept string or number)
+  if (data.category_id === undefined || data.category_id === null || data.category_id === '') {
     errors.category_id = ['Category is required'];
+  } else if (typeof data.category_id !== 'string' && typeof data.category_id !== 'number') {
+    errors.category_id = ['Category must be a valid ID'];
   }
 
   // Price validation
@@ -112,7 +114,7 @@ export function validateMedicine(data: any): {
   return {
     name: data.name.trim(),
     description: data.description?.trim() || '',
-    category_id: data.category_id,
+    category_id: String(data.category_id), // Convert to string for consistency
     price,
     quantity,
     expiry_date: data.expiry_date,

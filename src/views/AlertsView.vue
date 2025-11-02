@@ -6,7 +6,6 @@
         <button class="btn-outline" @click="filter = 'all'">Tất Cả</button>
         <button class="btn-outline" @click="filter = 'expiry'">Hết Hạn</button>
         <button class="btn-outline" @click="filter = 'stock'">Hết Hàng</button>
-        <button class="btn-outline" @click="filter = 'system'">Hệ Thống</button>
       </div>
     </div>
 
@@ -143,7 +142,6 @@ const filteredAlerts = computed(() => {
   if (filter.value === 'all') return alerts.value
   if (filter.value === 'expiry') return alerts.value.filter(a => a.type === 'expiry')
   if (filter.value === 'stock') return alerts.value.filter(a => a.type === 'low_stock')
-  if (filter.value === 'system') return alerts.value.filter(a => a.type === 'system')
   return alerts.value
 })
 
@@ -159,7 +157,6 @@ async function fetchAlerts() {
     if (filter.value !== 'all') {
       if (filter.value === 'expiry') params.type = 'expiry'
       if (filter.value === 'stock') params.type = 'low_stock'
-      if (filter.value === 'system') params.type = 'system'
     }
 
     const response = await api.get('/alerts', { params })

@@ -200,6 +200,22 @@ async function findCategoryIdByName(categoryName: string): Promise<string> {
   return category ? String(category.id) : "";
 }
 
+// Helper function to convert date to yyyy-MM-dd format
+function formatDateForInput(dateString: string | null | undefined): string {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    // Get local date in yyyy-MM-dd format
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch {
+    return "";
+  }
+}
+
 watch(
   () => props.medicine,
   async (medicine) => {
@@ -212,7 +228,7 @@ watch(
         category_id: categoryId,
         price: medicine.price,
         quantity: medicine.quantity,
-        expiry_date: medicine.expiryDate,
+        expiry_date: formatDateForInput(medicine.expiryDate),
         stock_alert: medicine.stockAlert,
         barcode: medicine.barcode || "",
         manufacturer: medicine.manufacturer || "",
@@ -242,12 +258,30 @@ function resetForm() {
 async function handleSubmit() {
   loading.value = true;
   try {
+    // Ensure date is in yyyy-MM-dd format
+    let expiryDate = formData.value.expiry_date;
+    if (expiryDate) {
+      // If date contains time, extract just the date part
+      if (expiryDate.includes('T')) {
+        expiryDate = expiryDate.split('T')[0];
+      }
+      // Validate format
+      const dateMatch = expiryDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!dateMatch) {
+        throw new Error("Định dạng ngày không hợp lệ. Vui lòng nhập ngày theo định dạng YYYY-MM-DD");
+      }
+    }
+
     const payload = {
       ...formData.value,
+      category_id: String(formData.value.category_id), // Ensure it's a string
       price: Number(formData.value.price),
       quantity: Number(formData.value.quantity),
       stock_alert: Number(formData.value.stock_alert) || 20,
-      expiry_date: formData.value.expiry_date,
+      expiry_date: expiryDate,
+      // Remove empty strings for optional fields
+      barcode: formData.value.barcode?.trim() || null,
+      manufacturer: formData.value.manufacturer?.trim() || null,
     };
 
     if (isEdit.value && props.medicine) {
@@ -261,7 +295,10 @@ async function handleSubmit() {
     console.error("Error saving medicine:", error);
     const { useToast } = await import("@/composables/useToast");
     const { error: showError } = useToast();
-    showError(error.response?.data?.error || "Lỗi khi lưu thuốc");
+    const errorMessage = error.response?.data?.error 
+      || error.message 
+      || "Lỗi khi lưu thuốc";
+    showError(errorMessage);
   } finally {
     loading.value = false;
   }

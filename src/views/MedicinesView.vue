@@ -32,6 +32,7 @@
           <option value="expired">Đã hết hạn</option>
           <option value="low">Hết hàng</option>
           <option value="expiring">Sắp hết hạn</option>
+          <option value="low_stock">Sắp hết hàng</option>
           <option value="available">Còn hàng</option>
         </select>
         <button @click="resetFilters" class="btn-secondary">
@@ -112,7 +113,7 @@
                   <span class="font-semibold text-primary">{{ formatCurrency(medicine.price) }}</span>
                 </td>
                 <td class="py-3 px-4">
-                  <span :class="getStockClass(medicine.quantity)">
+                  <span :class="getStockClass(medicine.quantity, medicine.stockAlert)">
                     {{ medicine.quantity }}
                   </span>
                 </td>
@@ -283,13 +284,15 @@ const filteredMedicines = computed(() => {
       const daysUntilExpiry = Math.floor((new Date(med.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
       if (stockFilter.value === 'expired') {
-        matchesStock = daysUntilExpiry < 0
+        matchesStock = daysUntilExpiry < 0 && med.quantity > 0
       } else if (stockFilter.value === 'low') {
-        matchesStock = med.quantity === 0 && daysUntilExpiry >= 0
+        matchesStock = med.quantity === 0
       } else if (stockFilter.value === 'expiring') {
         matchesStock = daysUntilExpiry >= 0 && daysUntilExpiry <= 30 && med.quantity > 0
+      } else if (stockFilter.value === 'low_stock') {
+        matchesStock = med.quantity > 0 && med.quantity <= med.stockAlert
       } else if (stockFilter.value === 'available') {
-        matchesStock = med.quantity > 0 && daysUntilExpiry > 30
+        matchesStock = med.quantity > med.stockAlert && daysUntilExpiry > 30
       }
     }
 
@@ -370,29 +373,31 @@ function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('vi-VN')
 }
 
-function getStockClass(quantity: number): string {
+function getStockClass(quantity: number, stockAlert?: number): string {
   if (quantity === 0) return 'text-red-600 font-semibold'
-  if (quantity < 20) return 'text-orange-600 font-semibold'
+  if (stockAlert && quantity <= stockAlert) return 'text-yellow-600 font-semibold'
   return 'text-gray-800'
 }
 
 function getStatusBadge(medicine: Medicine): string {
   const daysUntilExpiry = Math.floor((new Date(medicine.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
-  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Còn hàng
-  if (daysUntilExpiry < 0) return 'px-3 py-1 bg-red-500 text-white rounded-full text-xs'
-  if (medicine.quantity === 0) return 'px-3 py-1 bg-yellow-100 text-red-700 rounded-full text-xs'
-  if (daysUntilExpiry <= 30) return 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs'
+  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Sắp hết hàng > Còn hàng
+  if (daysUntilExpiry < 0 && medicine.quantity > 0) return 'px-3 py-1 bg-red-500 text-white rounded-full text-xs'
+  if (medicine.quantity === 0) return 'px-3 py-1 bg-red-500 text-white rounded-full text-xs'
+  if (daysUntilExpiry >= 0 && daysUntilExpiry <= 30 && medicine.quantity > 0) return 'px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs'
+  if (medicine.quantity > 0 && medicine.quantity <= medicine.stockAlert) return 'px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs'
   return 'px-3 py-1 bg-accent/20 text-accent rounded-full text-xs'
 }
 
 function getStatusText(medicine: Medicine): string {
   const daysUntilExpiry = Math.floor((new Date(medicine.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
-  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Còn hàng
-  if (daysUntilExpiry < 0) return 'Đã hết hạn'
+  // Ưu tiên: Đã hết hạn > Hết hàng > Sắp hết hạn > Sắp hết hàng > Còn hàng
+  if (daysUntilExpiry < 0 && medicine.quantity > 0) return 'Đã hết hạn'
   if (medicine.quantity === 0) return 'Hết hàng'
-  if (daysUntilExpiry <= 30) return 'Sắp hết hạn'
+  if (daysUntilExpiry >= 0 && daysUntilExpiry <= 30 && medicine.quantity > 0) return 'Sắp hết hạn'
+  if (medicine.quantity > 0 && medicine.quantity <= medicine.stockAlert) return 'Sắp hết hàng'
   return 'Còn hàng'
 }
 </script>
