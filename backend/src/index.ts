@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.js";
 import medicinesRoutes from "./routes/medicines.js";
+import categoriesRoutes from "./routes/categories.js";
 import inventoryRoutes from "./routes/inventory.js";
 import salesRoutes from "./routes/sales.js";
 import staffRoutes from "./routes/staff.js";
@@ -27,6 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/medicines", medicinesRoutes);
+app.use("/api/categories", categoriesRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/sales", salesRoutes);
 app.use("/api/staff", staffRoutes);
@@ -42,10 +44,11 @@ app.get("/", (req, res) => {
     name: "PharmaT API",
     version: "1.0.0",
     status: "running",
-    endpoints: {
+      endpoints: {
       health: "/api/health",
       auth: "/api/auth",
       medicines: "/api/medicines",
+      categories: "/api/categories",
       inventory: "/api/inventory",
       sales: "/api/sales",
       staff: "/api/staff",

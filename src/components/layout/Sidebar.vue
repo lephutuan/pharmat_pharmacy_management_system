@@ -55,7 +55,8 @@ import {
   ChartBarIcon,
   UserGroupIcon,
   UsersIcon,
-  CogIcon
+  CogIcon,
+  TagIcon
 } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
@@ -71,6 +72,7 @@ const settings = ref({
 const allMenuItems = [
   { name: 'Dashboard', path: '/', label: 'Trang Chủ', icon: HomeIcon },
   { name: 'Medicines', path: '/medicines', label: 'Thuốc', icon: BeakerIcon },
+  { name: 'Categories', path: '/categories', label: 'Danh Mục Thuốc', icon: TagIcon },
   { name: 'Inventory', path: '/inventory', label: 'Kho', icon: CubeIcon },
   { name: 'Sales', path: '/sales', label: 'Bán Hàng', icon: ShoppingCartIcon },
   { name: 'Alerts', path: '/alerts', label: 'Cảnh Báo', icon: BellAlertIcon },
@@ -95,7 +97,7 @@ const menuItems = computed(() => {
       case UserRole.SALES_STAFF:
         return ['Sales', 'Members'].includes(item.name)
       case UserRole.INVENTORY_STAFF:
-        return ['Medicines', 'Inventory', 'Reports'].includes(item.name)
+        return ['Medicines', 'Categories', 'Inventory', 'Reports'].includes(item.name)
       default:
         return false
     }
