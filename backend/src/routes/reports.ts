@@ -95,16 +95,36 @@ router.get("/category-sales", authenticateToken, requireRole("admin"), async (re
   }
 });
 
-// Get top selling products
+// Get top selling products (all time or by month/year)
 router.get("/top-products", authenticateToken, requireRole("admin"), async (req, res, next) => {
   try {
-    const { month, year, limit = 10 } = req.query;
+    const { month, year, limit = 10, all_time = false } = req.query;
     const currentDate = new Date();
     const targetMonth = month ? Number(month) : currentDate.getMonth() + 1;
     const targetYear = year ? Number(year) : currentDate.getFullYear();
 
-    const [rows]: any = await pool.execute(
-      `SELECT 
+    let query, params;
+    
+    if (all_time === 'true' || all_time === true) {
+      // Get top products all time
+      query = `SELECT 
+        m.id,
+        m.name,
+        mc.name as category_name,
+        SUM(oi.quantity) as quantity_sold,
+        COALESCE(SUM(oi.subtotal), 0) as revenue
+       FROM order_items oi
+       JOIN medicines m ON oi.medicine_id = m.id
+       JOIN medicine_categories mc ON m.category_id = mc.id
+       JOIN orders o ON oi.order_id = o.id
+       WHERE o.status = 'completed'
+       GROUP BY m.id, m.name, mc.name
+       ORDER BY revenue DESC
+       LIMIT ?`;
+      params = [Number(limit)];
+    } else {
+      // Get top products by month/year
+      query = `SELECT 
         m.id,
         m.name,
         mc.name as category_name,
@@ -117,18 +137,29 @@ router.get("/top-products", authenticateToken, requireRole("admin"), async (req,
        WHERE MONTH(o.created_at) = ? AND YEAR(o.created_at) = ? AND o.status = 'completed'
        GROUP BY m.id, m.name, mc.name
        ORDER BY revenue DESC
-       LIMIT ?`,
-      [targetMonth, targetYear, Number(limit)]
-    );
+       LIMIT ?`;
+      params = [targetMonth, targetYear, Number(limit)];
+    }
+
+    const [rows]: any = await pool.execute(query, params);
 
     // Calculate total revenue for percentage
-    const [totalRevenue]: any = await pool.execute(
-      `SELECT COALESCE(SUM(oi.subtotal), 0) as total
+    let totalQuery, totalParams;
+    if (all_time === 'true' || all_time === true) {
+      totalQuery = `SELECT COALESCE(SUM(oi.subtotal), 0) as total
        FROM order_items oi
        JOIN orders o ON oi.order_id = o.id
-       WHERE MONTH(o.created_at) = ? AND YEAR(o.created_at) = ? AND o.status = 'completed'`,
-      [targetMonth, targetYear]
-    );
+       WHERE o.status = 'completed'`;
+      totalParams = [];
+    } else {
+      totalQuery = `SELECT COALESCE(SUM(oi.subtotal), 0) as total
+       FROM order_items oi
+       JOIN orders o ON oi.order_id = o.id
+       WHERE MONTH(o.created_at) = ? AND YEAR(o.created_at) = ? AND o.status = 'completed'`;
+      totalParams = [targetMonth, targetYear];
+    }
+
+    const [totalRevenue]: any = await pool.execute(totalQuery, totalParams);
 
     const total = totalRevenue[0].total || 1;
     const products = rows.map((item: any) => ({

@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-title text-gray-800">Báo Cáo & Phân Tích</h1>
+      <h1 class="text-2xl font-title text-gray-800"></h1>
       <div class="flex gap-3">
         <div class="flex gap-2">
           <select v-model="selectedMonth" @change="fetchReports" class="input-field">
@@ -72,18 +72,20 @@
         <div v-else-if="dailySales.length === 0" class="h-64 flex items-center justify-center text-gray-500">
           Không có dữ liệu
         </div>
-        <div v-else class="h-64 flex items-end justify-between gap-2">
+        <div v-else class="h-64 flex items-end justify-start gap-1 overflow-x-auto pb-4 px-2">
           <div
             v-for="(day, index) in dailySales"
             :key="index"
-            class="flex-1 flex flex-col items-center"
+            class="flex flex-col items-center flex-shrink-0"
+            style="min-width: 28px;"
           >
             <div
               class="w-full bg-gradient-to-t from-primary to-secondary rounded-t-lg hover:opacity-80 transition-all cursor-pointer"
-              :style="{ height: dailySales.length > 0 ? `${(day.value / Math.max(...dailySales.map(d => d.value || 1), 1)) * 100}%` : '0%' }"
-              :title="formatCurrency(day.value)"
+              :style="getBarStyle(day, dailySales)"
+              :title="`Ngày ${day.label}: ${formatCurrency(day.value)}`"
             ></div>
-            <span class="text-xs text-gray-600 mt-2">{{ day.label }}</span>
+            <span class="text-xs text-gray-600 mt-2 whitespace-nowrap">{{ day.label }}</span>
+            <span class="text-xs font-medium text-gray-800 mt-1 whitespace-nowrap">{{ formatRevenueShort(day.value || 0) }}</span>
           </div>
         </div>
       </div>
@@ -187,6 +189,52 @@ const { success, error } = useToast()
 
 const categoryColors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500']
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
+}
+
+function formatRevenueShort(value: number): string {
+  if (value === 0) return '0'
+  
+  // Nếu >= 1 triệu, dùng M với 2 chữ số thập phân
+  if (value >= 1000000) {
+    const millions = value / 1000000
+    // Làm tròn đến 2 chữ số thập phân
+    const rounded = Math.round(millions * 100) / 100
+    // Nếu là số nguyên, hiển thị không có thập phân
+    if (rounded % 1 === 0) {
+      return `${rounded}M`
+    }
+    // Nếu có thập phân, hiển thị tối đa 2 chữ số và loại bỏ số 0 cuối
+    const formatted = rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
+    return `${formatted}M`
+  }
+  
+  // Nếu < 1 triệu, dùng K
+  const thousands = Math.round(value / 1000)
+  return `${thousands}K`
+}
+
+function getBarStyle(day: { label: string; value: number }, allValues: Array<{ label: string; value: number }>) {
+  const currentValue = day.value || 0
+  const maxValue = Math.max(...allValues.map(d => d.value || 0), 0)
+
+  // Nếu không có dữ liệu hoặc giá trị = 0
+  if (maxValue === 0 || currentValue === 0) {
+    return { height: '0%', minHeight: '0px' }
+  }
+
+  // Tính chiều cao theo tỷ lệ phần trăm thực tế
+  const heightPercent = (currentValue / maxValue) * 100
+  const minHeight = currentValue > 0 ? '8px' : '0px' // Minimum height for non-zero values
+
+  return {
+    height: `${Math.max(heightPercent, 0)}%`,
+    minHeight: minHeight,
+    maxHeight: '100%'
+  }
+}
+
 async function fetchReports() {
   loading.value = true
   try {
@@ -206,10 +254,20 @@ async function fetchReports() {
     const dailyRes = await api.get('/reports/daily-sales', {
       params: { month: selectedMonth.value, year: selectedYear.value }
     })
-    dailySales.value = dailyRes.data.map((item: any) => ({
-      label: String(item.day),
-      value: parseFloat(item.revenue) || 0
-    }))
+    // Map to array with all days of month (fill missing days with 0)
+    const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate()
+    const salesMap = new Map()
+    dailyRes.data.forEach((item: any) => {
+      salesMap.set(item.day, parseFloat(item.revenue) || 0)
+    })
+    
+    dailySales.value = []
+    for (let day = 1; day <= daysInMonth; day++) {
+      dailySales.value.push({
+        label: String(day),
+        value: salesMap.get(day) || 0
+      })
+    }
 
     // Fetch category sales
     const categoryRes = await api.get('/reports/category-sales', {
@@ -238,10 +296,6 @@ async function fetchReports() {
   } finally {
     loading.value = false
   }
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
 }
 
 async function exportPDF() {

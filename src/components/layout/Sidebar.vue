@@ -2,7 +2,7 @@
   <aside class="w-64 bg-white shadow-lg flex flex-col">
     <!-- Logo -->
     <div class="h-20 flex items-center justify-center border-b border-gray-200">
-      <h1 class="text-2xl font-title text-primary">PharmaT</h1>
+      <h1 class="text-3xl font-title font-bold text-primary tracking-tight">PharmaT</h1>
     </div>
 
     <!-- Navigation -->

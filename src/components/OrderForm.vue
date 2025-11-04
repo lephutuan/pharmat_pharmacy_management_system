@@ -116,7 +116,7 @@
         Hủy
       </button>
       <button type="submit" :disabled="loading || formData.items.length === 0" class="btn-primary">
-        {{ loading ? "Đang tạo..." : "Tạo Đơn Hàng" }}
+        {{ loading ? (props.orderId ? "Đang cập nhật..." : "Đang tạo...") : (props.orderId ? "Cập Nhật Đơn Hàng" : "Tạo Đơn Hàng") }}
       </button>
     </div>
   </form>
@@ -129,6 +129,10 @@ import api from "@/services/api";
 import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
+
+const props = defineProps<{
+  orderId?: string;
+}>();
 
 const emit = defineEmits<{
   success: [];
@@ -367,14 +371,22 @@ async function handleSubmit() {
       discount: formData.value.discount || 0,
     };
 
-    await api.post("/sales", payload);
-    const { success } = await import("@/composables/useToast").then(m => m.useToast());
-    success("Đơn hàng đã được tạo thành công!");
+    if (props.orderId) {
+      // Update existing order
+      await api.put(`/sales/${props.orderId}`, payload);
+      const { success } = await import("@/composables/useToast").then(m => m.useToast());
+      success("Đơn hàng đã được cập nhật thành công!");
+    } else {
+      // Create new order
+      await api.post("/sales", payload);
+      const { success } = await import("@/composables/useToast").then(m => m.useToast());
+      success("Đơn hàng đã được tạo thành công!");
+    }
     emit("success");
   } catch (error: any) {
-    console.error("Error creating order:", error);
+    console.error(props.orderId ? "Error updating order:" : "Error creating order:", error);
     const { error: showError } = await import("@/composables/useToast").then(m => m.useToast());
-    showError(error.response?.data?.error || "Lỗi khi tạo đơn hàng");
+    showError(error.response?.data?.error || (props.orderId ? "Lỗi khi cập nhật đơn hàng" : "Lỗi khi tạo đơn hàng"));
   } finally {
     loading.value = false;
   }
@@ -387,8 +399,65 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-onMounted(() => {
-  fetchMembers();
-  fetchMedicines();
+async function loadOrderData() {
+  if (!props.orderId) return;
+
+  try {
+    loading.value = true;
+    const response = await api.get(`/sales/${props.orderId}`);
+    const order = response.data;
+
+    // Load customer
+    formData.value.customer_id = order.customer_id || "";
+    
+    // Load order items first
+    formData.value.items = [];
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        // Fetch medicine details
+        const medicine = medicines.value.find(m => m.id === item.medicine_id);
+        if (medicine) {
+          formData.value.items.push({
+            medicineId: item.medicine_id,
+            medicine: medicine,
+            quantity: item.quantity,
+            price: parseFloat(item.price),
+            subtotal: parseFloat(item.subtotal),
+          });
+        }
+      }
+    }
+
+    // Load customer info and calculate discount after items are loaded
+    if (order.customer_id) {
+      const customer = members.value.find(m => m.id === order.customer_id);
+      selectedCustomer.value = customer || null;
+      
+      if (customer && customer.level) {
+        memberDiscount.value = calculateMemberDiscount(customer.level, totalAmount.value);
+        formData.value.discount = memberDiscount.value;
+      } else {
+        // If no member discount, use the discount from order
+        formData.value.discount = parseFloat(order.discount) || 0;
+        memberDiscount.value = 0;
+      }
+    } else {
+      // Load discount for non-member orders
+      formData.value.discount = parseFloat(order.discount) || 0;
+      memberDiscount.value = 0;
+    }
+  } catch (error: any) {
+    console.error("Error loading order data:", error);
+    const { error: showError } = await import("@/composables/useToast").then(m => m.useToast());
+    showError(error.response?.data?.error || "Lỗi khi tải dữ liệu đơn hàng");
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(async () => {
+  await fetchMembers();
+  await fetchMedicines();
+  await loadOrderData();
 });
 </script>

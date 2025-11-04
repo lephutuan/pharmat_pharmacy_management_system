@@ -1,8 +1,6 @@
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-title text-gray-800">Cảnh Báo</h1>
-    </div>
+    
 
     <!-- Alert Stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">

@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-title text-gray-800">Quản Lý Thuốc</h1>
+      <h1 class="text-2xl font-title text-gray-800"></h1>
       <button @click="openAddModal" class="btn-primary">
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -91,11 +91,14 @@
             <thead>
               <tr class="border-b border-gray-200">
                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Tên Thuốc</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Mã Vạch</th>
                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Danh Mục</th>
                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Giá</th>
                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Số Lượng</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Số Lượng Tối Thiểu</th>
                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Hết Hạn</th>
                 <th class="text-left py-3 px-4 font-semibold text-gray-700">Trạng Thái</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-700">Nhà Sản Xuất</th>
                 <th class="text-center py-3 px-4 font-semibold text-gray-700">Thao Tác</th>
               </tr>
             </thead>
@@ -103,10 +106,10 @@
               <tr v-for="medicine in pagedMedicines" :key="medicine.id"
                 class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4">
-                  <div>
-                    <p class="font-medium text-gray-800">{{ medicine.name }}</p>
-                    <p class="text-xs text-gray-500">{{ medicine.barcode }}</p>
-                  </div>
+                  <p class="font-medium text-gray-800">{{ medicine.name }}</p>
+                </td>
+                <td class="py-3 px-4">
+                  <p class="text-sm text-gray-600">{{ medicine.barcode || '-' }}</p>
                 </td>
                 <td class="py-3 px-4 text-gray-600">{{ medicine.category }}</td>
                 <td class="py-3 px-4">
@@ -117,11 +120,17 @@
                     {{ medicine.quantity }}
                   </span>
                 </td>
+                <td class="py-3 px-4 text-gray-600">
+                  {{ medicine.stockAlert || '-' }}
+                </td>
                 <td class="py-3 px-4 text-gray-600">{{ formatDate(medicine.expiryDate) }}</td>
                 <td class="py-3 px-4">
                   <span :class="getStatusBadge(medicine)">
                     {{ getStatusText(medicine) }}
                   </span>
+                </td>
+                <td class="py-3 px-4 text-gray-600">
+                  {{ medicine.manufacturer || '-' }}
                 </td>
                 <td class="py-3 px-4">
                   <div class="flex items-center justify-center gap-2">
@@ -148,7 +157,7 @@
         <div class="mt-6 flex items-center justify-between">
           <p class="text-sm text-gray-600">
             Hiển thị
-            {{ (currentPage - 1) * pageSize + (pagedMedicines.length ? 1 : 0) }}-
+            {{ (currentPage - 1) * pageSize + (pagedMedicines.length ? 1 : 0) }} -
             {{ (currentPage - 1) * pageSize + pagedMedicines.length }}
             trong tổng số {{ filteredMedicines.length }} kết quả
           </p>

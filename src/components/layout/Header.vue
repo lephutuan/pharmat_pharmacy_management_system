@@ -140,6 +140,7 @@ const pageTitle = computed(() => {
   const titles: Record<string, string> = {
     Dashboard: 'Trang Chủ',
     Medicines: 'Quản Lý Thuốc',
+    Categories: 'Quản Lý Danh Mục',
     Inventory: 'Quản Lý Kho',
     Sales: 'Bán Hàng',
     Alerts: 'Cảnh Báo',

@@ -2,6 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import pool from "../config/database";
+import { authenticateToken } from "../middleware/auth";
 import { validateLogin } from "../utils/validator";
 import { UnauthorizedError, AppError } from "../utils/errors";
 import { logger } from "../utils/logger";
@@ -83,6 +84,52 @@ router.get("/verify", (req, res) => {
     res.json({ valid: true, user: decoded });
   } catch (error) {
     res.status(401).json({ error: "Invalid token" });
+  }
+});
+
+// Change password
+router.post("/change-password", authenticateToken, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = (req as any).user?.id;
+
+    if (!currentPassword || !newPassword) {
+      throw new AppError("Current password and new password are required", 400);
+    }
+
+    if (newPassword.length < 6) {
+      throw new AppError("New password must be at least 6 characters", 400);
+    }
+
+    // Get user
+    const [userRows]: any = await pool.execute("SELECT * FROM users WHERE id = ?", [userId]);
+    if (userRows.length === 0) {
+      throw new UnauthorizedError("User not found");
+    }
+
+    const user = userRows[0];
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      throw new UnauthorizedError("Current password is incorrect");
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.execute("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);
+
+    logger.info("Password changed successfully", { userId });
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    if (error instanceof AppError || error instanceof UnauthorizedError) {
+      return next(error);
+    }
+    logger.error("Change password error", error);
+    next(error);
   }
 });
 

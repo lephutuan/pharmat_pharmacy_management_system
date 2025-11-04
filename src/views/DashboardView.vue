@@ -74,19 +74,26 @@
       <!-- Sales Chart -->
       <div class="card">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Doanh Thu 7 Ngày Gần Đây</h3>
-        <div class="h-64 flex items-end justify-between gap-2">
-          <div
-            v-for="(day, index) in weeklySales"
-            :key="index"
-            class="flex-1 flex flex-col items-center"
-          >
+        <div v-if="loading" class="h-64 flex items-center justify-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+        <div v-else-if="weeklySales.length === 0" class="h-64 flex items-center justify-center text-gray-500">
+          Chưa có dữ liệu doanh thu
+        </div>
+        <div v-else class="h-64 flex items-end justify-between gap-2">
             <div
-              class="w-full bg-gradient-to-t from-primary to-secondary rounded-t-lg hover:opacity-80 transition-all cursor-pointer"
-              :style="{ height: `${(day.value / Math.max(...weeklySales.map(d => d.value))) * 100}%` }"
-            ></div>
-            <span class="text-xs text-gray-600 mt-2">{{ day.label }}</span>
-            <span class="text-xs font-medium text-gray-800">{{ day.value }}K</span>
-          </div>
+              v-for="(day, index) in weeklySales"
+              :key="index"
+              class="flex-1 flex flex-col items-center"
+            >
+              <div
+                class="w-full bg-gradient-to-t from-primary to-secondary rounded-t-lg hover:opacity-80 transition-all cursor-pointer"
+                :style="getBarStyle(day, weeklySales)"
+                :title="`${day.label}: ${formatCurrency((day.rawValue || day.value * 1000))}`"
+              ></div>
+              <span class="text-xs text-gray-600 mt-2">{{ day.label }}</span>
+              <span class="text-xs font-medium text-gray-800">{{ day.value || 0 }}K</span>
+            </div>
         </div>
       </div>
 
@@ -119,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, onActivated } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 
@@ -134,15 +141,7 @@ const todayOrders = ref(0)
 const averageOrderValue = ref(0)
 const loading = ref(false)
 
-const weeklySales = ref([
-  { label: 'T2', value: 1200 },
-  { label: 'T3', value: 1500 },
-  { label: 'T4', value: 1100 },
-  { label: 'T5', value: 1800 },
-  { label: 'T6', value: 2000 },
-  { label: 'T7', value: 2200 },
-  { label: 'CN', value: 1900 }
-])
+const weeklySales = ref<Array<{ label: string; value: number; rawValue?: number }>>([])
 
 const recentOrders = ref<any[]>([])
 
@@ -154,6 +153,18 @@ async function fetchDashboardData() {
     todaySales.value = parseFloat(statsResponse.data.revenue) || 0
     todayOrders.value = parseInt(statsResponse.data.orders) || 0
     averageOrderValue.value = todayOrders.value > 0 ? Math.round(todaySales.value / todayOrders.value / 1000) : 0
+
+    // Fetch weekly sales (last 7 days)
+    const weeklyResponse = await api.get('/sales/weekly')
+    weeklySales.value = weeklyResponse.data.map((day: any) => {
+      const rawValue = parseFloat(day.value) || 0
+      const valueInK = Math.round(rawValue / 1000) // Convert to thousands for display
+      return {
+        label: day.label,
+        value: valueInK,
+        rawValue: rawValue // Keep raw value for calculations
+      }
+    })
 
     // Fetch medicines stats
     const medicinesResponse = await api.get('/medicines', { params: { page: 1, limit: 100 } })
@@ -177,9 +188,6 @@ async function fetchDashboardData() {
       total: parseFloat(order.final_amount) || 0,
       time: new Date(order.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     }))
-
-    // TODO: Calculate weekly sales from orders
-    // For now, keep mock data
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
   } finally {
@@ -187,12 +195,56 @@ async function fetchDashboardData() {
   }
 }
 
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   fetchDashboardData()
+  
+  // Auto refresh every 30 seconds
+  refreshInterval = setInterval(() => {
+    fetchDashboardData()
+  }, 30000)
+})
+
+// Refresh when route is activated (when navigating back to dashboard)
+onActivated(() => {
+  fetchDashboardData()
+})
+
+onBeforeUnmount(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
+})
+
+// Expose refresh function for external calls
+defineExpose({
+  refresh: fetchDashboardData
 })
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
+}
+
+function getBarStyle(day: { label: string; value: number; rawValue?: number }, allValues: Array<{ label: string; value: number; rawValue?: number }>) {
+  // Use rawValue if available for accurate calculation, otherwise convert value back to raw (multiply by 1000)
+  const currentRawValue = day.rawValue || (day.value * 1000)
+  const allRawValues = allValues.map(d => d.rawValue || (d.value * 1000))
+  const maxValue = Math.max(...allRawValues, 0)
+  
+  if (maxValue === 0) {
+    return { height: '0%', minHeight: '0px' }
+  }
+  
+  // Calculate height as percentage of max value (with minimum 4px for non-zero values)
+  const heightPercent = (currentRawValue / maxValue) * 100
+  const minHeight = currentRawValue > 0 ? '4px' : '0px'
+  
+  return {
+    height: `${Math.max(heightPercent, 0)}%`,
+    minHeight: minHeight,
+    maxHeight: '100%'
+  }
 }
 </script>
 

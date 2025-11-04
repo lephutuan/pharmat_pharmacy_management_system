@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-title text-gray-800">Quản Lý Kho</h1>
+      <h1 class="text-2xl font-title text-gray-800"></h1>
       <div class="flex gap-3">
         <button @click="openInventoryModal('import')" class="btn-accent">
           <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

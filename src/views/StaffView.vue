@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-title text-gray-800">Quản Lý Nhân Viên</h1>
+      <h1 class="text-2xl font-title text-gray-800"></h1>
       <button @click="openAddModal" class="btn-primary">
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -38,7 +38,8 @@
           </div>
           <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
             <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
         </div>
@@ -51,7 +52,8 @@
             <p class="text-3xl font-bold text-green-700">{{ activeStaff }}</p>
           </div>
           <svg class="w-12 h-12 text-green-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
       </div>
@@ -64,7 +66,8 @@
           </div>
           <div class="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
             <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
           </div>
         </div>
@@ -78,7 +81,8 @@
           </div>
           <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
             <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
         </div>
@@ -96,7 +100,8 @@
       <!-- Empty State -->
       <div v-else-if="pagedStaff.length === 0" class="text-center py-12">
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
         <p class="mt-4 text-gray-600 font-medium">Không tìm thấy nhân viên nào</p>
       </div>
@@ -116,11 +121,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="staff in pagedStaff"
-                :key="staff.id"
-                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
+              <tr v-for="staff in pagedStaff" :key="staff.id"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4">
                   <div class="flex items-center gap-3">
                     <img :src="staff.avatar" :alt="staff.name" class="w-10 h-10 rounded-full" />
@@ -135,7 +137,8 @@
                   </span>
                 </td>
                 <td class="py-3 px-4">
-                  <span :class="staff.active ? 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs' : 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs'">
+                  <span
+                    :class="staff.active ? 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs' : 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs'">
                     {{ staff.active ? 'Hoạt động' : 'Ngừng hoạt động' }}
                   </span>
                 </td>
@@ -143,12 +146,14 @@
                   <div class="flex items-center justify-center gap-2">
                     <button @click="openEditModal(staff)" class="text-primary hover:text-blue-700" title="Sửa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
                     <button @click="confirmDelete(staff)" class="text-red-600 hover:text-red-700" title="Xóa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
                   </div>
@@ -162,7 +167,7 @@
         <div class="mt-6 flex items-center justify-between">
           <p class="text-sm text-gray-600">
             Hiển thị
-            {{ (currentPage - 1) * pageSize + (pagedStaff.length ? 1 : 0) }}-
+            {{ (currentPage - 1) * pageSize + (pagedStaff.length ? 1 : 0) }} -
             {{ (currentPage - 1) * pageSize + pagedStaff.length }}
             trong tổng số {{ filteredStaff.length }} kết quả
           </p>
@@ -244,7 +249,7 @@ async function fetchStaff() {
 // Client-side filtering for additional filtering
 const filteredStaff = computed(() => {
   return staffList.value.filter(staff => {
-    const matchesSearch = !searchQuery.value || 
+    const matchesSearch = !searchQuery.value ||
       staff.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       staff.email.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       (staff.phone && staff.phone.includes(searchQuery.value))
@@ -340,4 +345,3 @@ function getRoleBadgeClass(role: UserRole): string {
   }
 }
 </script>
-

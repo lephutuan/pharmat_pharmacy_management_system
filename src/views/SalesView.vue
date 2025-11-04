@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-title text-gray-800">Bán Hàng</h1>
-      <button @click="showOrderModal = true" class="btn-primary">
+      <h1 class="text-2xl font-title text-gray-800"></h1>
+      <button @click="editOrder('')" class="btn-primary">
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
@@ -80,13 +80,36 @@
                     </button>
                     <button
                       v-if="order.status === 'pending'"
+                      @click="editOrder(order.id)"
+                      class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                      title="Sửa hóa đơn"
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      v-if="order.status === 'pending'"
                       @click="cancelOrder(order.id)"
                       class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
                       title="Hủy đơn hàng"
                     >
                       Hủy
                     </button>
-                    <span v-if="order.status !== 'pending'" class="text-xs text-gray-400">-</span>
+                    <button
+                      v-if="order.status === 'completed'"
+                      @click="openInvoiceModal(order.id)"
+                      class="px-3 py-1 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors text-sm"
+                      title="Xem và in hóa đơn"
+                    >
+                      In hóa đơn
+                    </button>
+                    <button
+                      v-if="order.status === 'completed'"
+                      @click="viewOrderDetails(order.id)"
+                      class="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                      title="Xem chi tiết"
+                    >
+                      Chi tiết
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -116,8 +139,24 @@
     </div>
 
     <!-- Order Modal -->
-    <Modal v-model="showOrderModal" title="Tạo Đơn Hàng Mới" size="large">
-      <OrderForm @success="handleOrderSuccess" @cancel="showOrderModal = false" />
+    <Modal v-model="showOrderModal" :title="editingOrderId ? 'Sửa Đơn Hàng' : 'Tạo Đơn Hàng Mới'" size="large">
+      <OrderForm :order-id="editingOrderId" @success="handleOrderSuccess" @cancel="handleOrderCancel" />
+    </Modal>
+
+    <!-- Invoice Modal -->
+    <Modal v-model="showInvoiceModal" title="Hóa Đơn Bán Hàng" size="large">
+      <div class="space-y-4">
+        <InvoiceModal :order-id="selectedOrderId" ref="invoiceModalRef" />
+        <div class="flex justify-end gap-3 pt-4 border-t">
+          <button @click="printInvoice" class="btn-primary">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            In Hóa Đơn
+          </button>
+          <button @click="showInvoiceModal = false" class="btn-outline">Đóng</button>
+        </div>
+      </div>
     </Modal>
   </div>
 </template>
@@ -127,6 +166,7 @@ import { ref, onMounted } from 'vue'
 import api from '@/services/api'
 import Modal from '@/components/Modal.vue'
 import OrderForm from '@/components/OrderForm.vue'
+import InvoiceModal from '@/components/InvoiceModal.vue'
 import { useToast } from '@/composables/useToast'
 
 const { success, error } = useToast()
@@ -140,6 +180,10 @@ const recentOrders = ref<any[]>([])
 const topProducts = ref<any[]>([])
 const loading = ref(false)
 const showOrderModal = ref(false)
+const showInvoiceModal = ref(false)
+const selectedOrderId = ref('')
+const editingOrderId = ref<string | undefined>(undefined)
+const invoiceModalRef = ref<InstanceType<typeof InvoiceModal> | null>(null)
 
 async function fetchSalesData() {
   loading.value = true
@@ -163,15 +207,21 @@ async function fetchSalesData() {
       status: order.status // Keep original status: 'pending', 'completed', 'cancelled'
     }))
 
-    // TODO: Fetch top products from a separate endpoint or calculate from orders
-    // For now, keep mock data
-    topProducts.value = [
-      { id: 1, name: 'Paracetamol', sold: 156, revenue: 2_340_000 },
-      { id: 2, name: 'Amoxicillin', sold: 89, revenue: 4_005_000 },
-      { id: 3, name: 'Vitamin C', sold: 120, revenue: 3_000_000 },
-      { id: 4, name: 'Ibuprofen', sold: 78, revenue: 1_950_000 },
-      { id: 5, name: 'Aspirin', sold: 95, revenue: 1_140_000 }
-    ]
+    // Fetch top products (all time)
+    try {
+      const topProductsResponse = await api.get('/reports/top-products', {
+        params: { all_time: true, limit: 5 }
+      })
+      topProducts.value = topProductsResponse.data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        sold: parseInt(item.quantity_sold) || 0,
+        revenue: parseFloat(item.revenue) || 0
+      }))
+    } catch (error) {
+      console.error('Error fetching top products:', error)
+      topProducts.value = []
+    }
   } catch (error) {
     console.error('Error fetching sales data:', error)
   } finally {
@@ -181,7 +231,18 @@ async function fetchSalesData() {
 
 function handleOrderSuccess() {
   showOrderModal.value = false
+  editingOrderId.value = undefined
   fetchSalesData()
+}
+
+function handleOrderCancel() {
+  showOrderModal.value = false
+  editingOrderId.value = undefined
+}
+
+function editOrder(orderId: string) {
+  editingOrderId.value = orderId || undefined
+  showOrderModal.value = true
 }
 
 onMounted(() => {
@@ -247,6 +308,23 @@ async function cancelOrder(orderId: string) {
     fetchSalesData()
   } catch (err: any) {
     error(err.response?.data?.error || 'Lỗi khi hủy đơn hàng')
+  }
+}
+
+function openInvoiceModal(orderId: string) {
+  selectedOrderId.value = orderId
+  showInvoiceModal.value = true
+}
+
+function viewOrderDetails(orderId: string) {
+  openInvoiceModal(orderId)
+}
+
+function printInvoice() {
+  if (invoiceModalRef.value) {
+    invoiceModalRef.value.printInvoice()
+  } else {
+    window.print()
   }
 }
 </script>

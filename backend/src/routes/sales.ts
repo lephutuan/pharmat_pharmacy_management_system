@@ -119,6 +119,96 @@ router.get("/stats/today", async (req, res) => {
   }
 });
 
+// Get weekly sales (last 7 days)
+router.get("/weekly", async (req, res, next) => {
+  try {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6); // Include today, so 7 days total
+
+    const [rows]: any = await pool.execute(
+      `SELECT 
+        DATE(created_at) as date,
+        COALESCE(SUM(final_amount), 0) as revenue,
+        COUNT(*) as orders
+       FROM orders 
+       WHERE DATE(created_at) >= ? AND DATE(created_at) <= ? AND status = 'completed'
+       GROUP BY DATE(created_at)
+       ORDER BY date ASC`,
+      [sevenDaysAgo.toISOString().split("T")[0], today.toISOString().split("T")[0]]
+    );
+
+    // Create a map of dates to revenue
+    const salesMap = new Map();
+    rows.forEach((row: any) => {
+      salesMap.set(row.date, parseFloat(row.revenue) || 0);
+    });
+
+    // Generate array for last 7 days with revenue
+    const weeklySales = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+      
+      const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+      const dayName = dayNames[date.getDay()];
+      
+      weeklySales.push({
+        label: dayName,
+        date: dateStr,
+        value: salesMap.get(dateStr) || 0,
+        orders: salesMap.has(dateStr) ? rows.find((r: any) => r.date === dateStr)?.orders || 0 : 0
+      });
+    }
+
+    res.json(weeklySales);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    handleDatabaseError(error);
+  }
+});
+
+// Get order by ID with full details
+router.get("/:id", authenticateToken, async (req, res, next) => {
+  try {
+    const [orderRows]: any = await pool.execute(
+      `SELECT o.*, 
+              m.name as customer_name, m.phone as customer_phone, m.email as customer_email,
+              u.name as staff_name, u.email as staff_email
+       FROM orders o
+       LEFT JOIN members m ON o.customer_id = m.id
+       LEFT JOIN users u ON o.staff_id = u.id
+       WHERE o.id = ?`,
+      [req.params.id]
+    );
+
+    if (orderRows.length === 0) {
+      throw new AppError("Order not found", 404);
+    }
+
+    const [orderItems]: any = await pool.execute(
+      `SELECT oi.*, med.name as medicine_name, med.barcode
+       FROM order_items oi 
+       JOIN medicines med ON oi.medicine_id = med.id 
+       WHERE oi.order_id = ?
+       ORDER BY oi.id ASC`,
+      [req.params.id]
+    );
+
+    orderRows[0].items = orderItems;
+
+    res.json(orderRows[0]);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    handleDatabaseError(error);
+  }
+});
+
 // Create order (now creates as completed since payment is immediate)
 router.post("/", authenticateToken, async (req, res, next) => {
   const startTime = Date.now();
@@ -221,6 +311,153 @@ router.post("/", authenticateToken, async (req, res, next) => {
     logger.info("Order created", { orderId, userId, finalAmount });
 
     res.status(201).json(orderRows[0]);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return next(error);
+    }
+    handleDatabaseError(error);
+  }
+});
+
+// Update order (only pending orders can be edited)
+router.put("/:id", authenticateToken, async (req, res, next) => {
+  const startTime = Date.now();
+  try {
+    const {
+      customer_id,
+      items,
+      discount = 0,
+    } = req.body;
+
+    if (!items || items.length === 0) {
+      throw new AppError("Order must have at least one item", 400);
+    }
+
+    const userId = (req as any).user?.id;
+
+    // Get current order
+    const [orderRows]: any = await pool.execute(
+      `SELECT o.*, 
+              m.name as customer_name
+       FROM orders o
+       LEFT JOIN members m ON o.customer_id = m.id
+       WHERE o.id = ?`,
+      [req.params.id]
+    );
+
+    if (orderRows.length === 0) {
+      throw new AppError("Order not found", 404);
+    }
+
+    const order = orderRows[0];
+
+    // Only allow editing pending orders
+    if (order.status !== 'pending') {
+      throw new AppError("Only pending orders can be edited", 400);
+    }
+
+    // Restore inventory from old order items
+    const [oldItems]: any = await pool.execute(
+      "SELECT medicine_id, quantity FROM order_items WHERE order_id = ?",
+      [req.params.id]
+    );
+
+    for (const oldItem of oldItems) {
+      await pool.execute(
+        "UPDATE medicines SET quantity = quantity + ? WHERE id = ?",
+        [oldItem.quantity, oldItem.medicine_id]
+      );
+    }
+
+    // Delete old order items
+    await pool.execute("DELETE FROM order_items WHERE order_id = ?", [req.params.id]);
+
+    // Calculate new totals
+    let totalAmount = 0;
+    for (const item of items) {
+      totalAmount += item.quantity * item.price;
+    }
+
+    // Calculate member discount if customer is a member
+    let memberDiscount = discount;
+    if (customer_id) {
+      const [memberRows]: any = await pool.execute(
+        "SELECT level FROM members WHERE id = ?",
+        [customer_id]
+      );
+      if (memberRows.length > 0) {
+        const memberLevel = memberRows[0].level;
+        const autoDiscount = calculateMemberDiscount(memberLevel, totalAmount);
+        memberDiscount = Math.max(autoDiscount, discount || 0);
+      }
+    }
+
+    const finalAmount = totalAmount - memberDiscount;
+
+    // Update order
+    await pool.execute(
+      `UPDATE orders SET customer_id = ?, total_amount = ?, discount = ?, final_amount = ? WHERE id = ?`,
+      [customer_id || null, totalAmount, memberDiscount, finalAmount, req.params.id]
+    );
+
+    // Create new order items
+    for (const item of items) {
+      // Check stock availability
+      const [medRows]: any = await pool.execute(
+        "SELECT quantity FROM medicines WHERE id = ?",
+        [item.medicine_id]
+      );
+      if (medRows.length === 0) {
+        throw new AppError(`Medicine with id ${item.medicine_id} not found`, 404);
+      }
+      if (medRows[0].quantity < item.quantity) {
+        throw new AppError(`Insufficient stock for medicine ${item.medicine_id}. Available: ${medRows[0].quantity}, Requested: ${item.quantity}`, 400);
+      }
+
+      const itemId = `${req.params.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await pool.execute(
+        `INSERT INTO order_items (id, order_id, medicine_id, quantity, price, subtotal)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          itemId,
+          req.params.id,
+          item.medicine_id,
+          item.quantity,
+          item.price,
+          item.quantity * item.price,
+        ]
+      );
+      // Note: tr_sale_update_stock trigger will automatically update inventory
+    }
+
+    // Get updated order with details
+    const [updatedOrderRows]: any = await pool.execute(
+      `SELECT o.*, 
+              m.name as customer_name, m.phone as customer_phone,
+              u.name as staff_name
+       FROM orders o
+       LEFT JOIN members m ON o.customer_id = m.id
+       LEFT JOIN users u ON o.staff_id = u.id
+       WHERE o.id = ?`,
+      [req.params.id]
+    );
+
+    const [orderItems]: any = await pool.execute(
+      `SELECT oi.*, med.name as medicine_name 
+       FROM order_items oi 
+       JOIN medicines med ON oi.medicine_id = med.id 
+       WHERE oi.order_id = ?
+       ORDER BY oi.id ASC`,
+      [req.params.id]
+    );
+
+    updatedOrderRows[0].items = orderItems;
+
+    const duration = Date.now() - startTime;
+    logger.request("PUT", `/sales/${req.params.id}`, userId, duration);
+    logger.info("Order updated", { orderId: req.params.id, userId, finalAmount });
+
+    res.json(updatedOrderRows[0]);
   } catch (error) {
     if (error instanceof AppError) {
       return next(error);
