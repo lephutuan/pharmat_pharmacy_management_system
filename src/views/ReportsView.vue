@@ -221,17 +221,19 @@ function getBarStyle(day: { label: string; value: number }, allValues: Array<{ l
 
   // Nếu không có dữ liệu hoặc giá trị = 0
   if (maxValue === 0 || currentValue === 0) {
-    return { height: '0%', minHeight: '0px' }
+    return { height: '0px', minHeight: '0px' }
   }
 
-  // Tính chiều cao theo tỷ lệ phần trăm thực tế
+  // Tính chiều cao theo tỷ lệ phần trăm và chuyển sang pixel
+  // Container có height h-64 (256px), trừ đi khoảng cách cho labels (~80px)
+  const availableHeight = 176 // 256px - 80px cho labels
   const heightPercent = (currentValue / maxValue) * 100
-  const minHeight = currentValue > 0 ? '8px' : '0px' // Minimum height for non-zero values
+  const heightInPx = Math.max((heightPercent / 100) * availableHeight, currentValue > 0 ? 8 : 0)
 
   return {
-    height: `${Math.max(heightPercent, 0)}%`,
-    minHeight: minHeight,
-    maxHeight: '100%'
+    height: `${heightInPx}px`,
+    minHeight: currentValue > 0 ? '8px' : '0px',
+    maxHeight: `${availableHeight}px`
   }
 }
 

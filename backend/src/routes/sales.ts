@@ -126,22 +126,46 @@ router.get("/weekly", async (req, res, next) => {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 6); // Include today, so 7 days total
 
+    const startDate = sevenDaysAgo.toISOString().split("T")[0];
+    const endDate = today.toISOString().split("T")[0];
+
+    // Debug: Check all orders in the date range (any status)
+    const [allOrdersDebug]: any = await pool.execute(
+      `SELECT DATE(created_at) as date, status, COUNT(*) as count, SUM(final_amount) as total
+       FROM orders 
+       WHERE DATE(created_at) >= ? AND DATE(created_at) <= ?
+       GROUP BY DATE(created_at), status
+       ORDER BY date ASC, status`,
+      [startDate, endDate]
+    );
+    console.log('📊 Debug: All orders in date range:', allOrdersDebug);
+
+    // Get completed orders for revenue calculation
+    // Sử dụng DATE_FORMAT để đảm bảo format date nhất quán
     const [rows]: any = await pool.execute(
       `SELECT 
-        DATE(created_at) as date,
+        DATE_FORMAT(created_at, '%Y-%m-%d') as date,
         COALESCE(SUM(final_amount), 0) as revenue,
         COUNT(*) as orders
        FROM orders 
        WHERE DATE(created_at) >= ? AND DATE(created_at) <= ? AND status = 'completed'
        GROUP BY DATE(created_at)
        ORDER BY date ASC`,
-      [sevenDaysAgo.toISOString().split("T")[0], today.toISOString().split("T")[0]]
+      [startDate, endDate]
     );
+
+    console.log('💰 Completed orders revenue:', JSON.stringify(rows, null, 2));
+    console.log('📅 Date range:', { startDate, endDate });
 
     // Create a map of dates to revenue
     const salesMap = new Map();
     rows.forEach((row: any) => {
-      salesMap.set(row.date, parseFloat(row.revenue) || 0);
+      // Đảm bảo date được format đúng
+      const dateKey = row.date ? String(row.date).split('T')[0] : null;
+      if (dateKey) {
+        salesMap.set(dateKey, parseFloat(row.revenue) || 0);
+        console.log(`📊 Mapping: ${dateKey} -> ${parseFloat(row.revenue) || 0}`);
+      }
     });
 
     // Generate array for last 7 days with revenue
@@ -154,14 +178,25 @@ router.get("/weekly", async (req, res, next) => {
       const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
       const dayName = dayNames[date.getDay()];
       
+      // Tìm revenue từ map
+      const revenue = salesMap.get(dateStr) || 0;
+      const orderRow = rows.find((r: any) => {
+        const rDate = r.date ? String(r.date).split('T')[0] : null;
+        return rDate === dateStr;
+      });
+      const orders = orderRow ? (parseInt(orderRow.orders) || 0) : 0;
+      
+      console.log(`📈 Day ${dateStr} (${dayName}): revenue=${revenue}, orders=${orders}`);
+      
       weeklySales.push({
         label: dayName,
         date: dateStr,
-        value: salesMap.get(dateStr) || 0,
-        orders: salesMap.has(dateStr) ? rows.find((r: any) => r.date === dateStr)?.orders || 0 : 0
+        value: revenue,
+        orders: orders
       });
     }
 
+    console.log('📦 Final weekly sales:', JSON.stringify(weeklySales, null, 2));
     res.json(weeklySales);
   } catch (error) {
     if (error instanceof AppError) {

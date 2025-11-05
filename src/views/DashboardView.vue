@@ -80,7 +80,7 @@
         <div v-else-if="weeklySales.length === 0" class="h-64 flex items-center justify-center text-gray-500">
           Chưa có dữ liệu doanh thu
         </div>
-        <div v-else class="h-64 flex items-end justify-between gap-2">
+        <div v-else class="h-64 flex items-end justify-between gap-2 px-2">
             <div
               v-for="(day, index) in weeklySales"
               :key="index"
@@ -92,7 +92,9 @@
                 :title="`${day.label}: ${formatCurrency((day.rawValue || day.value * 1000))}`"
               ></div>
               <span class="text-xs text-gray-600 mt-2">{{ day.label }}</span>
-              <span class="text-xs font-medium text-gray-800">{{ day.value || 0 }}K</span>
+              <span class="text-xs font-medium text-gray-800">
+                {{ formatRevenueShort(day.rawValue || 0) }}
+              </span>
             </div>
         </div>
       </div>
@@ -155,16 +157,61 @@ async function fetchDashboardData() {
     averageOrderValue.value = todayOrders.value > 0 ? Math.round(todaySales.value / todayOrders.value / 1000) : 0
 
     // Fetch weekly sales (last 7 days)
-    const weeklyResponse = await api.get('/sales/weekly')
-    weeklySales.value = weeklyResponse.data.map((day: any) => {
-      const rawValue = parseFloat(day.value) || 0
-      const valueInK = Math.round(rawValue / 1000) // Convert to thousands for display
-      return {
-        label: day.label,
-        value: valueInK,
-        rawValue: rawValue // Keep raw value for calculations
+    try {
+      const weeklyResponse = await api.get('/sales/weekly')
+      console.log('📊 Weekly sales API response:', weeklyResponse.data)
+      
+      if (weeklyResponse.data && Array.isArray(weeklyResponse.data) && weeklyResponse.data.length > 0) {
+        weeklySales.value = weeklyResponse.data.map((day: any) => {
+          // Backend trả về day.value là doanh thu thực tế (VND)
+          const rawValue = parseFloat(day.value) || 0
+          // Convert to thousands for display - giữ lại giá trị nhỏ (< 1000) để hiển thị
+          const valueInK = rawValue >= 1000 ? Math.round(rawValue / 1000) : (rawValue > 0 ? Math.round(rawValue / 100) / 10 : 0)
+          return {
+            label: day.label || 'N/A',
+            value: valueInK,
+            rawValue: rawValue // Keep raw value for calculations
+          }
+        })
+        console.log('✅ Processed weekly sales:', weeklySales.value)
+        console.log('📈 Raw values:', weeklySales.value.map(d => ({ label: d.label, rawValue: d.rawValue })))
+      } else {
+        console.warn('⚠️ Weekly sales data is empty or not an array, creating fallback')
+        // Fallback: tạo mảng 7 ngày với giá trị 0
+        const today = new Date()
+        const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+        weeklySales.value = []
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(today)
+          date.setDate(today.getDate() - i)
+          const dayName = dayNames[date.getDay()]
+          weeklySales.value.push({
+            label: dayName,
+            value: 0,
+            rawValue: 0
+          })
+        }
+        console.log('📅 Created fallback weekly sales:', weeklySales.value)
       }
-    })
+    } catch (weeklyError: any) {
+      console.error('❌ Error fetching weekly sales:', weeklyError)
+      console.error('Error details:', weeklyError.response?.data || weeklyError.message)
+      // Fallback: tạo mảng 7 ngày với giá trị 0 khi có lỗi
+      const today = new Date()
+      const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+      weeklySales.value = []
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today)
+        date.setDate(today.getDate() - i)
+        const dayName = dayNames[date.getDay()]
+        weeklySales.value.push({
+          label: dayName,
+          value: 0,
+          rawValue: 0
+        })
+      }
+      console.log('📅 Created fallback weekly sales after error:', weeklySales.value)
+    }
 
     // Fetch medicines stats
     const medicinesResponse = await api.get('/medicines', { params: { page: 1, limit: 100 } })
@@ -226,24 +273,52 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
 }
 
-function getBarStyle(day: { label: string; value: number; rawValue?: number }, allValues: Array<{ label: string; value: number; rawValue?: number }>) {
-  // Use rawValue if available for accurate calculation, otherwise convert value back to raw (multiply by 1000)
-  const currentRawValue = day.rawValue || (day.value * 1000)
-  const allRawValues = allValues.map(d => d.rawValue || (d.value * 1000))
-  const maxValue = Math.max(...allRawValues, 0)
+function formatRevenueShort(value: number): string {
+  if (value === 0) return '0'
   
-  if (maxValue === 0) {
-    return { height: '0%', minHeight: '0px' }
+  // Nếu >= 1 triệu, dùng M với 2 chữ số thập phân
+  if (value >= 1000000) {
+    const millions = value / 1000000
+    const rounded = Math.round(millions * 100) / 100
+    if (rounded % 1 === 0) {
+      return `${rounded}M`
+    }
+    const formatted = rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
+    return `${formatted}M`
   }
   
-  // Calculate height as percentage of max value (with minimum 4px for non-zero values)
+  // Nếu < 1 triệu, dùng K
+  const thousands = Math.round(value / 1000)
+  return `${thousands}K`
+}
+
+function getBarStyle(day: { label: string; value: number; rawValue?: number }, allValues: Array<{ label: string; value: number; rawValue?: number }>) {
+  // Use rawValue if available for accurate calculation, otherwise convert value back to raw (multiply by 1000)
+  const currentRawValue = day.rawValue !== undefined ? day.rawValue : (day.value * 1000)
+  const allRawValues = allValues.map(d => d.rawValue !== undefined ? d.rawValue : (d.value * 1000))
+  const maxValue = Math.max(...allRawValues, 1) // Use 1 instead of 0 to avoid division by zero
+  
+  // Tính chiều cao theo tỷ lệ và chuyển sang pixel
+  // Container có height h-64 (256px), trừ đi khoảng cách cho labels (~80px)
+  const availableHeight = 176 // 256px - 80px cho labels
+  
+  if (currentRawValue === 0 || maxValue === 0) {
+    // Hiển thị cột với chiều cao tối thiểu 2px để người dùng biết có dữ liệu
+    return { 
+      height: '2px', 
+      minHeight: '2px',
+      opacity: '0.3' // Làm mờ để phân biệt với cột có giá trị
+    }
+  }
+  
   const heightPercent = (currentRawValue / maxValue) * 100
-  const minHeight = currentRawValue > 0 ? '4px' : '0px'
+  const heightInPx = Math.max((heightPercent / 100) * availableHeight, 8) // Minimum 8px for non-zero values
   
   return {
-    height: `${Math.max(heightPercent, 0)}%`,
-    minHeight: minHeight,
-    maxHeight: '100%'
+    height: `${heightInPx}px`,
+    minHeight: '8px',
+    maxHeight: `${availableHeight}px`,
+    opacity: '1'
   }
 }
 </script>
