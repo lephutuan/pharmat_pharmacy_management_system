@@ -124,7 +124,7 @@
                   {{ medicine.stockAlert || '-' }}
                 </td>
                 <td class="py-3 px-4 text-gray-600">{{ formatDate(medicine.expiryDate) }}</td>
-                <td class="py-3 px-4">
+                <td class="py-3 px-4 text-nowrap">
                   <span :class="getStatusBadge(medicine)">
                     {{ getStatusText(medicine) }}
                   </span>
