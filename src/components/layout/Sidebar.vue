@@ -95,9 +95,9 @@ const menuItems = computed(() => {
       case UserRole.ADMIN:
         return true
       case UserRole.SALES_STAFF:
-        return ['Sales', 'Members'].includes(item.name)
+        return ['Sales', 'Members', 'Medicines'].includes(item.name)
       case UserRole.INVENTORY_STAFF:
-        return ['Medicines', 'Categories', 'Inventory', 'Reports'].includes(item.name)
+        return ['Medicines', 'Categories', 'Inventory'].includes(item.name)
       default:
         return false
     }

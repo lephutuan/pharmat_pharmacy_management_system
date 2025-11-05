@@ -14,10 +14,12 @@ import {
 const router = express.Router();
 
 // Get all orders
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     const { date, status, page = 1, limit = 50 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
+    const userId = (req as any).user?.id;
+    const userRole = (req as any).user?.role;
 
     let query = `
       SELECT o.*, 
@@ -29,6 +31,12 @@ router.get("/", async (req, res) => {
       WHERE 1=1
     `;
     const params: any[] = [];
+
+    // Sales Staff chỉ xem được đơn hàng của chính mình
+    if (userRole === 'sales_staff' && userId) {
+      query += " AND o.staff_id = ?";
+      params.push(userId);
+    }
 
     if (date) {
       query += " AND DATE(o.created_at) = ?";
@@ -76,6 +84,13 @@ router.get("/", async (req, res) => {
     // Get total count
     let countQuery = "SELECT COUNT(*) as total FROM orders WHERE 1=1";
     const countParams: any[] = [];
+    
+    // Sales Staff chỉ đếm đơn hàng của chính mình
+    if (userRole === 'sales_staff' && userId) {
+      countQuery += " AND staff_id = ?";
+      countParams.push(userId);
+    }
+    
     if (date) {
       countQuery += " AND DATE(created_at) = ?";
       countParams.push(date);

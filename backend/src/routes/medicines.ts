@@ -63,7 +63,7 @@ const medicines = [
   },
 ];
 
-// Get all medicines (protected)
+// Get all medicines (protected - all authenticated users can view, but only admin/inventory can edit)
 router.get("/", authenticateToken, async (req, res, next) => {
   const startTime = Date.now();
   try {
@@ -132,7 +132,7 @@ router.get("/", authenticateToken, async (req, res, next) => {
   }
 });
 
-// Get medicine by ID (protected)
+// Get medicine by ID (protected - all authenticated users can view)
 router.get("/:id", authenticateToken, async (req, res, next) => {
   try {
     const [rows]: any = await pool.execute(

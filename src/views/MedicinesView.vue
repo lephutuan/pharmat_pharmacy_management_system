@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-title text-gray-800"></h1>
-      <button @click="openAddModal" class="btn-primary">
+      <button v-if="canEdit" @click="openAddModal" class="btn-primary">
         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
@@ -148,7 +148,7 @@
                   {{ medicine.manufacturer || '-' }}
                 </td>
                 <td class="py-3 px-4">
-                  <div class="flex items-center justify-center gap-2">
+                  <div v-if="canEdit" class="flex items-center justify-center gap-2">
                     <button @click="openEditModal(medicine)" class="text-primary hover:text-blue-700" title="Sửa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -162,6 +162,7 @@
                       </svg>
                     </button>
                   </div>
+                  <span v-else class="text-gray-400 text-sm">Chỉ xem</span>
                 </td>
               </tr>
             </tbody>
@@ -199,13 +200,22 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import type { Medicine } from '@/types'
+import { UserRole } from '@/types'
 import api from '@/services/api'
 import Modal from '@/components/Modal.vue'
 import MedicineForm from '@/components/MedicineForm.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 
 const { success, error } = useToast()
+const authStore = useAuthStore()
+
+// Check if user can edit medicines (Admin and Inventory Staff only)
+const canEdit = computed(() => {
+  if (!authStore.user) return false
+  return authStore.user.role === UserRole.ADMIN || authStore.user.role === UserRole.INVENTORY_STAFF
+})
 
 const searchQuery = ref('')
 const selectedCategory = ref('')
