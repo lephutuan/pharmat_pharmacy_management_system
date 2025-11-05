@@ -10,16 +10,16 @@
       </button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <!-- Sales Today Stats -->
       <div class="card bg-gradient-primary text-white lg:col-span-1">
         <div class="space-y-4">
           <h3 class="text-lg font-semibold">Hôm Nay</h3>
-          <div>
-            <p class="text-3xl font-bold">{{ formatCurrency(todayStats.revenue) }}</p>
-            <p class="text-sm opacity-90">Tổng doanh thu</p>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-4">
+            <div>
+              <p class="text-3xl font-bold">{{ formatCurrency(todayStats.revenue) }}</p>
+              <p class="text-sm opacity-90">Tổng doanh thu</p>
+            </div>
             <div>
               <p class="text-2xl font-bold">{{ todayStats.orders }}</p>
               <p class="text-sm opacity-90">Đơn hàng</p>
@@ -33,7 +33,7 @@
       </div>
 
       <!-- Recent Sales -->
-      <div class="card lg:col-span-2">
+      <div class="card lg:col-span-3">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Đơn Hàng Gần Đây</h3>
         <div class="overflow-x-auto">
           <table class="w-full">
@@ -63,51 +63,36 @@
                 <td class="py-3 px-4">
                   <span class="font-semibold text-primary">{{ formatCurrency(order.total) }}</span>
                 </td>
-                <td class="py-3 px-4 text-center">
+                <td class="py-3 px-4 text-nowrap text-center">
                   <span :class="getStatusBadgeClass(order.status)">
                     {{ getStatusLabel(order.status) }}
                   </span>
                 </td>
                 <td class="py-3 px-4 text-center">
                   <div class="flex items-center justify-center gap-2">
-                    <button
-                      v-if="order.status === 'pending'"
-                      @click="confirmOrder(order.id)"
+                    <button v-if="order.status === 'pending'" @click="confirmOrder(order.id)"
                       class="px-3 py-1 bg-accent text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
-                      title="Xác nhận/Hoàn thành"
-                    >
+                      title="Xác nhận/Hoàn thành">
                       Xác nhận
                     </button>
-                    <button
-                      v-if="order.status === 'pending'"
-                      @click="editOrder(order.id)"
+                    <button v-if="order.status === 'pending'" @click="editOrder(order.id)"
                       class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
-                      title="Sửa hóa đơn"
-                    >
+                      title="Sửa hóa đơn">
                       Sửa
                     </button>
-                    <button
-                      v-if="order.status === 'pending'"
-                      @click="cancelOrder(order.id)"
+                    <button v-if="order.status === 'pending'" @click="cancelOrder(order.id)"
                       class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
-                      title="Hủy đơn hàng"
-                    >
+                      title="Hủy đơn hàng">
                       Hủy
                     </button>
-                    <button
-                      v-if="order.status === 'completed'"
-                      @click="openInvoiceModal(order.id)"
+                    <button v-if="order.status === 'completed'" @click="openInvoiceModal(order.id)"
                       class="px-3 py-1 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors text-sm"
-                      title="Xem và in hóa đơn"
-                    >
+                      title="Xem và in hóa đơn">
                       In hóa đơn
                     </button>
-                    <button
-                      v-if="order.status === 'completed'"
-                      @click="viewOrderDetails(order.id)"
+                    <button v-if="order.status === 'completed'" @click="viewOrderDetails(order.id)"
                       class="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
-                      title="Xem chi tiết"
-                    >
+                      title="Xem chi tiết">
                       Chi tiết
                     </button>
                   </div>
@@ -150,7 +135,8 @@
         <div class="flex justify-end gap-3 pt-4 border-t">
           <button @click="printInvoice" class="btn-primary">
             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
             In Hóa Đơn
           </button>
