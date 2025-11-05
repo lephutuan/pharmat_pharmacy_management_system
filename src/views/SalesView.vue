@@ -95,6 +95,11 @@
                       title="Xem chi tiết">
                       Chi tiết
                     </button>
+                    <button v-if="order.status === 'cancelled'" @click="viewOrderDetails(order.id)"
+                      class="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                      title="Xem chi tiết">
+                      Chi tiết
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -133,7 +138,7 @@
       <div class="space-y-4">
         <InvoiceModal :order-id="selectedOrderId" ref="invoiceModalRef" />
         <div class="flex justify-end gap-3 pt-4 border-t">
-          <button @click="printInvoice" class="btn-primary">
+          <button v-if="selectedOrderStatus !== 'cancelled'" @click="printInvoice" class="btn-primary">
             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -168,6 +173,7 @@ const loading = ref(false)
 const showOrderModal = ref(false)
 const showInvoiceModal = ref(false)
 const selectedOrderId = ref('')
+const selectedOrderStatus = ref<string | null>(null)
 const editingOrderId = ref<string | undefined>(undefined)
 const invoiceModalRef = ref<InstanceType<typeof InvoiceModal> | null>(null)
 
@@ -299,6 +305,9 @@ async function cancelOrder(orderId: string) {
 
 function openInvoiceModal(orderId: string) {
   selectedOrderId.value = orderId
+  // Tìm order trong danh sách để lấy status
+  const order = recentOrders.value.find(o => o.id === orderId)
+  selectedOrderStatus.value = order?.status || null
   showInvoiceModal.value = true
 }
 

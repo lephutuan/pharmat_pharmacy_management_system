@@ -12,7 +12,8 @@
 
     <!-- Filters -->
     <div class="card">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Tìm kiếm nhân viên</h3>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <input v-model="searchQuery" type="text" placeholder="Tìm kiếm nhân viên..." class="input-field" />
         <select v-model="roleFilter" class="input-field">
           <option value="">Tất cả vai trò</option>
@@ -25,6 +26,19 @@
           <option value="true">Hoạt động</option>
           <option value="false">Ngừng hoạt động</option>
         </select>
+        <button @click="resetFilters" class="btn-secondary">
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Đặt lại
+        </button>
+        <button @click="handleSearch" class="btn-primary">
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Tìm kiếm
+        </button>
       </div>
     </div>
 
@@ -246,6 +260,17 @@ async function fetchStaff() {
   }
 }
 
+function handleSearch() {
+  fetchStaff()
+}
+
+function resetFilters() {
+  searchQuery.value = ''
+  roleFilter.value = ''
+  activeFilter.value = ''
+  // Không tự động tìm kiếm khi reset, chỉ reset giá trị
+}
+
 // Client-side filtering for additional filtering
 const filteredStaff = computed(() => {
   return staffList.value.filter(staff => {
@@ -267,10 +292,7 @@ const pagedStaff = computed(() => {
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredStaff.value.length / pageSize.value)))
 
-watch([searchQuery, roleFilter, activeFilter], () => {
-  currentPage.value = 1
-  fetchStaff()
-})
+// Đã xóa auto-search, chỉ tìm khi nhấn nút Tìm kiếm
 
 watch(currentPage, () => {
   fetchStaff()

@@ -11,19 +11,19 @@
       </button>
     </div>
 
-    <!-- Advanced Filters -->
+    <!-- Search and Filters -->
     <div class="card">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-800">Bộ Lọc Nâng Cao</h3>
-        <button @click="showAdvancedFilters = !showAdvancedFilters" class="text-sm text-primary hover:underline">
-          {{ showAdvancedFilters ? 'Thu gọn' : 'Mở rộng' }}
+        <h3 class="text-lg font-semibold text-gray-800">Tìm kiếm thuốc</h3>
+        <button v-if="!showAdvancedFilters" @click="showAdvancedFilters = true"
+          class="text-sm text-primary hover:underline">
+          Mở rộng
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input v-model="searchQuery" type="text" placeholder="Tìm kiếm theo tên, mã vạch..." class="input-field"
-          @input="debounceSearch" />
-        <select v-model="selectedCategory" class="input-field" @change="fetchMedicines">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <input v-model="searchQuery" type="text" placeholder="Tìm kiếm theo tên, mã vạch..." class="input-field" />
+        <select v-model="selectedCategory" class="input-field">
           <option value="">Tất cả danh mục</option>
           <option v-for="cat in categories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
         </select>
@@ -41,10 +41,25 @@
           </svg>
           Đặt lại
         </button>
+        <button @click="handleSearch" class="btn-primary">
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Tìm kiếm
+        </button>
+
       </div>
+
 
       <!-- Advanced Filters Panel -->
       <div v-if="showAdvancedFilters" class="mt-4 pt-4 border-t border-gray-200">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800">Bộ Lọc Nâng Cao</h3>
+          <button @click="showAdvancedFilters = false" class="text-sm text-primary hover:underline">
+            Thu gọn
+          </button>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Khoảng giá từ</label>
@@ -207,15 +222,8 @@ const totalItems = ref(0)
 const showModal = ref(false)
 const editingMedicine = ref<Medicine | null>(null)
 
-let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
-
-function debounceSearch() {
-  if (searchDebounceTimer) {
-    clearTimeout(searchDebounceTimer)
-  }
-  searchDebounceTimer = setTimeout(() => {
-    fetchMedicines()
-  }, 500)
+function handleSearch() {
+  fetchMedicines()
 }
 
 function resetFilters() {
@@ -226,7 +234,7 @@ function resetFilters() {
   priceMax.value = undefined
   quantityMin.value = undefined
   manufacturerFilter.value = ''
-  fetchMedicines()
+  // Không tự động tìm kiếm khi reset, chỉ reset giá trị
 }
 
 // Fetch medicines from API
@@ -335,10 +343,7 @@ onMounted(() => {
   fetchMedicines()
 })
 
-// Watch for filter changes
-watch([selectedCategory, stockFilter, priceMin, priceMax, quantityMin, manufacturerFilter], () => {
-  currentPage.value = 1
-})
+// Đã xóa auto-search, chỉ tìm khi nhấn nút Tìm kiếm
 
 // Modal handlers
 function openAddModal() {

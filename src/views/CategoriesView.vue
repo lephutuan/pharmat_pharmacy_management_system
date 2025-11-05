@@ -12,23 +12,32 @@
 
     <!-- Search and Sort -->
     <div class="card">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Tìm kiếm theo tên danh mục..."
-          class="input-field"
-          @input="handleSearch"
-        />
-        <select v-model="sortBy" @change="fetchCategories" class="input-field">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Tìm kiếm danh mục</h3>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <input v-model="searchQuery" type="text" placeholder="Tìm kiếm theo tên danh mục..." class="input-field" />
+        <select v-model="sortBy" class="input-field">
           <option value="name">Sắp xếp theo tên</option>
           <option value="count">Sắp xếp theo số lượng</option>
           <option value="created">Sắp xếp theo ngày tạo</option>
         </select>
-        <select v-model="sortOrder" @change="fetchCategories" class="input-field">
+        <select v-model="sortOrder" class="input-field">
           <option value="asc">Tăng dần</option>
           <option value="desc">Giảm dần</option>
         </select>
+        <button @click="resetFilters" class="btn-secondary">
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Đặt lại
+        </button>
+        <button @click="handleSearch" class="btn-primary">
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Tìm kiếm
+        </button>
+
       </div>
     </div>
 
@@ -64,16 +73,11 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="category in categories"
-                :key="category.id"
-                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
+              <tr v-for="category in categories" :key="category.id"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4">
-                  <button
-                    @click="viewCategoryDetails(category)"
-                    class="font-medium text-primary hover:text-blue-700 hover:underline cursor-pointer"
-                  >
+                  <button @click="viewCategoryDetails(category)"
+                    class="font-medium text-primary hover:text-blue-700 hover:underline cursor-pointer">
                     {{ category.name }}
                   </button>
                 </td>
@@ -81,33 +85,23 @@
                   {{ category.description || "—" }}
                 </td>
                 <td class="py-3 px-4">
-                  <button
-                    @click="viewCategoryDetails(category)"
-                    class="font-semibold text-primary hover:text-blue-700 hover:underline cursor-pointer"
-                  >
+                  <button @click="viewCategoryDetails(category)"
+                    class="font-semibold text-primary hover:text-blue-700 hover:underline cursor-pointer">
                     {{ category.medicineCount }} thuốc
                   </button>
                 </td>
                 <td class="py-3 px-4 text-gray-600">{{ formatDate(category.createdAt) }}</td>
                 <td class="py-3 px-4">
                   <div class="flex items-center justify-center gap-2">
-                    <button
-                      @click="openEditModal(category)"
-                      class="text-accent hover:text-green-700"
-                      title="Chỉnh sửa"
-                    >
+                    <button @click="openEditModal(category)" class="text-accent hover:text-green-700" title="Chỉnh sửa">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
-                    <button
-                      @click="handleDelete(category)"
-                      class="text-red-500 hover:text-red-700"
-                      title="Xóa"
+                    <button @click="handleDelete(category)" class="text-red-500 hover:text-red-700" title="Xóa"
                       :disabled="category.medicineCount > 0"
-                      :class="{ 'opacity-50 cursor-not-allowed': category.medicineCount > 0 }"
-                    >
+                      :class="{ 'opacity-50 cursor-not-allowed': category.medicineCount > 0 }">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -151,11 +145,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="medicine in categoryMedicines"
-              :key="medicine.id"
-              class="border-b border-gray-100 hover:bg-gray-50"
-            >
+            <tr v-for="medicine in categoryMedicines" :key="medicine.id"
+              class="border-b border-gray-100 hover:bg-gray-50">
               <td class="py-3 px-4 font-medium text-gray-800">{{ medicine.name }}</td>
               <td class="py-3 px-4 text-gray-600">{{ formatCurrency(medicine.price) }}</td>
               <td class="py-3 px-4 text-gray-600">{{ medicine.quantity }}</td>
@@ -224,12 +215,14 @@ async function fetchCategories() {
 }
 
 function handleSearch() {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = setTimeout(() => {
-    fetchCategories();
-  }, 500);
+  fetchCategories();
+}
+
+function resetFilters() {
+  searchQuery.value = '';
+  sortBy.value = 'name';
+  sortOrder.value = 'asc';
+  // Không tự động tìm kiếm khi reset, chỉ reset giá trị
 }
 
 // Modal handlers
@@ -289,7 +282,7 @@ async function handleDelete(category: Category) {
   } catch (err: any) {
     console.error("Error deleting category:", err);
     const errorMessage = err.response?.data?.error || "Không thể xóa danh mục";
-    
+
     // Handle constraint error
     if (errorMessage.includes("thuốc") || errorMessage.includes("medicine")) {
       error(errorMessage);
