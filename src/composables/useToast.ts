@@ -13,7 +13,7 @@ export function useToast() {
   const showToast = (
     message: string,
     type: Toast["type"] = "info",
-    duration: number = 3000
+    duration: number = type === "error" ? 6000 : 3000
   ) => {
     const id = `toast-${Date.now()}-${Math.random()}`;
     const toast: Toast = { id, message, type, duration };
