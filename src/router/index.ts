@@ -93,12 +93,23 @@ const router = createRouter({
   ],
 });
 
+// Helper function to save toast to sessionStorage (used before redirect)
+function savePendingToast(message: string, type: 'success' | 'error' | 'warning' | 'info', duration: number = 3000) {
+  sessionStorage.setItem('pendingToast', JSON.stringify({
+    message,
+    type,
+    duration,
+    createdAt: Date.now()
+  }));
+}
+
 // Navigation guards
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
   // Check if user needs to be authenticated
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    savePendingToast('Vui lòng đăng nhập', 'warning');
     return next({ name: "Login" });
   }
 
@@ -111,6 +122,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.allowedRoles && authStore.user) {
     const allowedRoles = to.meta.allowedRoles as UserRole[];
     if (!allowedRoles.includes(authStore.user.role)) {
+      savePendingToast('Không có quyền truy cập chức năng này', 'error');
       return next({ name: "Dashboard" });
     }
   }

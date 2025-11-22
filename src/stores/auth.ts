@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { User } from "@/types";
 import { UserRole } from "@/types";
-import api from "@/services/api";
+import api, { cancelAllPendingRequests } from "@/services/api";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref<User | null>(null);
@@ -32,12 +32,19 @@ export const useAuthStore = defineStore("auth", () => {
       return { success: true };
     } catch (error: any) {
       console.error("Login failed:", error);
-      const errorMessage = error.response?.data?.error || "Đăng nhập thất bại";
+      let errorMessage = error.response?.data?.error || "Đăng nhập thất bại";
+      // Chuyển đổi message tiếng Anh sang tiếng Việt
+      if (errorMessage === "Invalid credentials") {
+        errorMessage = "Sai email hoặc mật khẩu";
+      }
       return { success: false, error: errorMessage };
     }
   }
 
   function logout() {
+    // Cancel tất cả pending API requests trước khi logout
+    cancelAllPendingRequests();
+
     user.value = null;
     token.value = null;
     isAuthenticated.value = false;

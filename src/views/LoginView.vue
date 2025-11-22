@@ -11,13 +11,13 @@
       <form @submit.prevent="handleLogin" class="space-y-6">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-          <input v-model="email" type="email" required class="input-field" placeholder="Nhập email của bạn" />
+          <input v-model="email" type="text" class="input-field" placeholder="Nhập email của bạn" />
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Mật khẩu</label>
-          <input ref="passwordInput" v-model="password" type="password" required class="input-field"
-            placeholder="Nhập mật khẩu của bạn" autocomplete="current-password" inputmode="latin" />
+          <input ref="passwordInput" v-model="password" type="password" class="input-field"
+            placeholder="Nhập mật khẩu của bạn" autocomplete="current-password" />
         </div>
 
         <div class="flex items-center justify-between">
@@ -63,9 +63,11 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { successPersistent } = useToast()
 
 const email = ref('')
 const password = ref('')
@@ -74,11 +76,17 @@ const passwordInput = ref<HTMLInputElement | null>(null)
 
 const errorMessage = ref('')
 
-// Tắt IME cho ô nhập mật khẩu
+// Tắt IME cho ô nhập mật khẩu và khôi phục error message nếu có
 onMounted(() => {
   if (passwordInput.value) {
     passwordInput.value.setAttribute('lang', 'en')
       ; (passwordInput.value.style as any).imeMode = 'disabled'
+  }
+
+  // Khôi phục error message từ sessionStorage (để survive HMR)
+  const savedError = sessionStorage.getItem('loginError')
+  if (savedError) {
+    errorMessage.value = savedError
   }
 })
 
@@ -86,22 +94,50 @@ onMounted(() => {
 watch([email, password], () => {
   if (errorMessage.value) {
     errorMessage.value = ''
+    sessionStorage.removeItem('loginError')
   }
 })
 
+// Validate email format
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
 async function handleLogin() {
+  errorMessage.value = ''
+  sessionStorage.removeItem('loginError')
+
+  // Validate trước khi gửi request
+  if (!email.value.trim()) {
+    errorMessage.value = 'Vui lòng nhập email'
+    return
+  }
+
+  if (!isValidEmail(email.value)) {
+    errorMessage.value = 'Email không đúng định dạng'
+    return
+  }
+
+  if (!password.value) {
+    errorMessage.value = 'Vui lòng nhập mật khẩu'
+    return
+  }
+
   loading.value = true
-  errorMessage.value = '' // Ẩn thông báo lỗi khi bắt đầu đăng nhập lại
 
   try {
     const result = await authStore.login(email.value, password.value)
     if (result.success) {
       // Đăng nhập thành công - đảm bảo xóa thông báo lỗi
       errorMessage.value = ''
+      sessionStorage.removeItem('loginError')
+      // Hiển thị toast thông báo đăng nhập thành công
+      successPersistent('Đăng nhập thành công!', 2000)
       router.push('/')
     } else {
       errorMessage.value = result.error || 'Đăng nhập thất bại'
-      // Thông báo lỗi sẽ hiển thị đến khi user nhấn đăng nhập lại hoặc thay đổi input
+      sessionStorage.setItem('loginError', errorMessage.value)
     }
   } catch (error: any) {
     console.error('Login failed:', error)
@@ -111,7 +147,7 @@ async function handleLogin() {
     } else {
       errorMessage.value = error.response?.data?.error || 'Đã có lỗi xảy ra'
     }
-    // Thông báo lỗi sẽ hiển thị đến khi user nhấn đăng nhập lại hoặc thay đổi input
+    sessionStorage.setItem('loginError', errorMessage.value)
   } finally {
     loading.value = false
   }

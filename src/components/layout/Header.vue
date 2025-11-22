@@ -36,7 +36,8 @@
           <p class="text-sm font-medium text-gray-800">{{ user?.name }}</p>
           <p class="text-xs text-gray-500">{{ roleLabel }}</p>
         </div>
-        <button @click="showLogoutModal = true" class="ml-2 p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
+        <button @click="showLogoutModal = true"
+          class="ml-2 p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -56,10 +57,12 @@
         <p class="text-gray-700 text-center">Bạn có chắc chắn muốn đăng xuất không?</p>
       </div>
       <template #footer>
-        <button @click="showLogoutModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+        <button @click="showLogoutModal = false"
+          class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
           Hủy
         </button>
-        <button @click="confirmLogout" class="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
+        <button @click="confirmLogout"
+          class="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
           Đăng xuất
         </button>
       </template>
@@ -78,10 +81,12 @@ import ChatModal from '@/components/ChatModal.vue'
 import NotificationsDropdown from '@/components/NotificationsDropdown.vue'
 import Modal from '@/components/Modal.vue'
 import api from '@/services/api'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { successPersistent } = useToast()
 
 const showChat = ref(false)
 const showNotifications = ref(false)
@@ -172,6 +177,8 @@ const pageTitle = computed(() => {
 function confirmLogout() {
   authStore.logout()
   showLogoutModal.value = false
+  // Lưu toast vào sessionStorage để hiển thị sau khi page reload
+  successPersistent('Đăng xuất thành công!', 2000)
   router.push('/login')
 }
 </script>

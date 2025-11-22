@@ -14,16 +14,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ToastContainer from '@/components/ToastContainer.vue'
+import { restorePendingToasts } from '@/composables/useToast'
 
 const loading = ref(false)
 const authStore = useAuthStore()
+const route = useRoute()
 
 onMounted(() => {
   authStore.initAuth()
 })
+
+// Khôi phục toast khi route thay đổi (sau khi login/logout)
+// Delay để đợi page ổn định sau khi navigate
+watch(() => route.path, () => {
+  // Gọi nhiều lần với delay khác nhau để đảm bảo bắt được toast
+  // ngay cả khi có HMR reload
+  setTimeout(() => restorePendingToasts(), 50)
+  setTimeout(() => restorePendingToasts(), 200)
+  setTimeout(() => restorePendingToasts(), 500)
+}, { immediate: true })
 </script>
 
 <style>
