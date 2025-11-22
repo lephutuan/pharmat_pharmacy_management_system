@@ -36,7 +36,7 @@
           <p class="text-sm font-medium text-gray-800">{{ user?.name }}</p>
           <p class="text-xs text-gray-500">{{ roleLabel }}</p>
         </div>
-        <button @click="logout" class="ml-2 p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
+        <button @click="showLogoutModal = true" class="ml-2 p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -49,6 +49,21 @@
     <Teleport to="body">
       <ChatModal v-if="showChat" @close="showChat = false" />
     </Teleport>
+
+    <!-- Logout Confirmation Modal -->
+    <Modal v-model="showLogoutModal" title="Xác nhận đăng xuất" size="small">
+      <div class="py-4">
+        <p class="text-gray-700 text-center">Bạn có chắc chắn muốn đăng xuất không?</p>
+      </div>
+      <template #footer>
+        <button @click="showLogoutModal = false" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+          Hủy
+        </button>
+        <button @click="confirmLogout" class="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
+          Đăng xuất
+        </button>
+      </template>
+    </Modal>
   </header>
 </template>
 
@@ -61,6 +76,7 @@ import { UserRole } from '@/types'
 import { BellAlertIcon } from '@heroicons/vue/24/outline'
 import ChatModal from '@/components/ChatModal.vue'
 import NotificationsDropdown from '@/components/NotificationsDropdown.vue'
+import Modal from '@/components/Modal.vue'
 import api from '@/services/api'
 
 const route = useRoute()
@@ -69,6 +85,7 @@ const authStore = useAuthStore()
 
 const showChat = ref(false)
 const showNotifications = ref(false)
+const showLogoutModal = ref(false)
 const hasUnreadMessages = ref(false)
 const unreadNotificationsCount = ref(0)
 const notificationsRef = ref<InstanceType<typeof NotificationsDropdown> | null>(null)
@@ -152,8 +169,9 @@ const pageTitle = computed(() => {
   return titles[route.name as string] || 'PharmaT'
 })
 
-function logout() {
+function confirmLogout() {
   authStore.logout()
+  showLogoutModal.value = false
   router.push('/login')
 }
 </script>
